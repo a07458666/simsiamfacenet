@@ -1,0 +1,4 @@
+*.pth.tar
+*.tar
+
+.ipynb_checkpoints/
