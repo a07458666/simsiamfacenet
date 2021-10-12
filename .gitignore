@@ -2,3 +2,4 @@
 *.tar
 *.pyc
 .ipynb_checkpoints/
+.gitattributes
