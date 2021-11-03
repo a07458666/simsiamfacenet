@@ -22,13 +22,19 @@ python trainSimCLR.py --data_path <train_data_path>  --batch_size 8 --lr 2e-4 --
 python trainSimSiam.py --data_path <train_data_path>  --batch_size 8 --lr 2e-4 --output_foloder <model output path> --epochs 100
 ```
 
-To train the SimSiam model(s), run this command:
+To train the VICReg model(s), run this command:
 
 ```train_VICReg
 python trainVICReg.py --data_path <train_data_path>  --batch_size 8 --lr 2e-4 --output_foloder <model output path> --epochs 100
 ```
 
-* scheduler use `ReduceLROnPlateau`
+To train the train_SimSiam + VICReg model(s), run this command:
+
+```trainSimSiamAndVICReg
+python trainSimSiamAndVICReg.py --data_path <train_data_path>  --batch_size 8 --lr 2e-4 --output_foloder <model output path> --epochs 100
+```
+
+* scheduler use `CosineAnnealingLR`
 * optimizer  use `SGD`, momentum = 0.9, weight_decay = 1e-4
 * Data augmentation(RandomResizedCrop, RandomHorizontalFlip, ColorJitter, RandomRotation, GaussianBlur)
 
@@ -38,7 +44,7 @@ python trainVICReg.py --data_path <train_data_path>  --batch_size 8 --lr 2e-4 --
 python trainSimSiam.py --data_path <train_data_path> --batch_size 8 --lr 2e-4 --pretrain_model_path <pretrain_model_path> --output_foloder <model output path> --epochs 100
 ```
 
-* scheduler use `ReduceLROnPlateau`
+* scheduler use `CosineAnnealingLR`
 * optimizer  use `SGD`, momentum = 0.9, weight_decay = 1e-4
 * Data augmentation(RandomResizedCrop, RandomHorizontalFlip, ColorJitter, RandomRotation, GaussianBlur)
 
@@ -79,4 +85,4 @@ Our model achieves the following performance on :
 
 | Model name         | Top 1 Accuracy  | Top 5 Accuracy |
 | ------------------ |---------------- | -------------- |
-| My best model      |     82.657%     |      NA        |
+| My best model      |     62.17%      |     52.45%     |
