@@ -12,26 +12,20 @@ pip install -r requirements.txt
 
 ## Training(SSL)
 
-To train the SimSiam model(s), run this command:
-
-```train_SimCLR
-python trainSimCLR.py --data_path <train_data_path>  --batch_size 8 --lr 2e-4 --output_foloder <model output path> --epochs 100
-```
-
 ```train_SimSiam
-python trainSimSiam.py --data_path <train_data_path>  --batch_size 8 --lr 2e-4 --output_foloder <model output path> --epochs 100
+python trainSimSiam.py --data_path <train_data_path>  --batch_size 8 --lr 0.05 --output_foloder <model output path> --epochs 100
 ```
 
 To train the VICReg model(s), run this command:
 
 ```train_VICReg
-python trainVICReg.py --data_path <train_data_path>  --batch_size 8 --lr 2e-4 --output_foloder <model output path> --epochs 100
+python trainVICReg.py --data_path <train_data_path>  --batch_size 8 --lr 0.05 --output_foloder <model output path> --epochs 100
 ```
 
 To train the train_SimSiam + VICReg model(s), run this command:
 
 ```trainSimSiamAndVICReg
-python trainSimSiamAndVICReg.py --data_path <train_data_path>  --batch_size 8 --lr 2e-4 --output_foloder <model output path> --epochs 100
+python trainSimSiamAndVICReg.py --data_path <train_data_path>  --batch_size 8 --lr 0.05 --output_foloder <model output path> --epochs 100
 ```
 
 * scheduler use `CosineAnnealingLR`
@@ -41,7 +35,7 @@ python trainSimSiamAndVICReg.py --data_path <train_data_path>  --batch_size 8 --
 ## Training(Facenet)
 
 ```train_facenet
-python trainSimSiam.py --data_path <train_data_path> --batch_size 8 --lr 2e-4 --pretrain_model_path <pretrain_model_path> --output_foloder <model output path> --epochs 100
+python trainFace.py --data_path <train_data_path> --batch_size 32 --lr 0.05 --output_foloder <model output path> --epochs 100
 ```
 
 * scheduler use `CosineAnnealingLR`
@@ -58,7 +52,7 @@ python eval.py --data_path <eval_data_path> --classes_path <classes.txt> --train
 
 ## Reproduceing Submission
 
-[model link](https://drive.google.com/file/d/1FXQF4Pbpco3FkNbiQxSbN__ZSSd-ypsV/view?usp=sharing)
+[model link]()
 
 ```inference
 python inference.py --data_path <test_image_path> --classes_path <classes.txt> --test_filename_path <testing_img_order.txt> --model_path <model_path>
