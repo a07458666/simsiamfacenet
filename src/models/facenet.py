@@ -38,7 +38,7 @@ class Facenet(nn.Module):
                                         nn.Linear(prev_dim, prev_dim, bias=False),
                                         nn.BatchNorm1d(prev_dim),
                                         nn.ReLU(inplace=True), # second layer
-                                        nn.Linear(prev_dim, dim, bias=False),
+                                        nn.Linear(prev_dim, pred_dim, bias=False),
                                         nn.BatchNorm1d(pred_dim, affine=False),
                                         L2_norm()) # output layer
         # self.encoder.fc[6].bias.requires_grad = False # hack: not use bias as it is followed by BN
