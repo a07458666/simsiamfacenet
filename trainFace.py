@@ -59,7 +59,6 @@ def create_dataloader(args):
     np.random.shuffle(img_inds)
     train_inds = img_inds[:int(0.8 * len(img_inds))]
     val_inds = img_inds[int(0.8 * len(img_inds)):]
-    # dataset_val = TripletImageLoader(args.data_path_val, transform=trans_eval)
 
     train_loader = DataLoader(
         dataset_train,
@@ -216,9 +215,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Facenet")
     parser.add_argument(
         "--data_path", type=str, default="../../dataset/face_cleaned_data/train"
-    )
-    parser.add_argument(
-        "--data_path_val", type=str, default="../../dataset/face_cleaned_data/val"
     )
     parser.add_argument(
         "--batch_size",
