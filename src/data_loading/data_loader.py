@@ -45,7 +45,7 @@ class FaceImages(Dataset):
 class TripletImageLoader(Dataset):
     def __init__(self, root, choic_count = 2, transform=None, target_transform=None):
         classes, class_to_idx, idx_to_class = self.find_classes(root)
-        imgs, targets = self.make_dataset(root, class_to_idx)
+        imgs, targets, label_to_indices = self.make_dataset(root, class_to_idx)
         self.targets = targets
         self.root = root
         self.imgs = imgs
@@ -53,8 +53,7 @@ class TripletImageLoader(Dataset):
         self.class_to_idx = class_to_idx
         self.idx_to_class = idx_to_class
         self.choic_count = choic_count
-        self.label_to_indices = {label: np.where(np.array(targets) == int(self.class_to_idx[label]))[0]
-                                     for label in self.classes}
+        self.label_to_indices = label_to_indices #{label: np.where(np.array(targets) == int(self.class_to_idx[label]))[0] for label in self.classes}
         self.transform = transform
         self.target_transform = target_transform
 
@@ -62,7 +61,7 @@ class TripletImageLoader(Dataset):
         imgs = []
         targets = []
         path, target = self.imgs[index]
-        random_choice = np.random.choice(list(self.label_to_indices[str(self.idx_to_class[target])]), size=self.choic_count)
+        random_choice = np.random.choice(list(self.label_to_indices[str(target)]), size=self.choic_count)
         for choice_index in random_choice:
             path, target = self.imgs[choice_index]
             img = Image.open(os.path.join(self.root, path)).convert('RGB')
@@ -90,16 +89,19 @@ class TripletImageLoader(Dataset):
     def make_dataset(self, dir, class_to_idx):
         images = []
         targets = []
+        label_to_indices = {}
         for target in os.listdir(dir):
             d = os.path.join(dir, target)
             if not os.path.isdir(d):
                 continue
-
+            idx = class_to_idx[target]
+            label_to_indices[str(idx)] = []
             for filename in os.listdir(d):
                 if is_image_file(filename):
+                    label_to_indices[str(idx)].append(len(images))
                     path = '{0}/{1}'.format(target, filename)
-                    item = (path, class_to_idx[target])
+                    item = (path, idx)
                     images.append(item)
-                    targets.append(class_to_idx[target])
+                    targets.append(idx)
 
-        return images, targets
+        return images, targets, label_to_indices
