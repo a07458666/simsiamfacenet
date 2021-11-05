@@ -32,7 +32,13 @@ def create_model(args):
     from facenet_pytorch import InceptionResnetV1
     from src.models.facenet import Facenet
 
-    backbone = InceptionResnetV1()
+    if (args.pretrain == "casia-webface"):
+        backbone = InceptionResnetV1(pretrained = 'casia-webface')
+    elif (args.pretrain == "vggface2"):
+        backbone = InceptionResnetV1(pretrained = 'vggface2')
+    else:
+        backbone = InceptionResnetV1()
+
 
     if args.pretrain_model_path != "":
         backbone = torch.load(args.pretrain_model_path).to(device)
@@ -286,6 +292,11 @@ if __name__ == "__main__":
         "--alpha",
         type=float,
         default=0.5,
+    )
+    parser.add_argument(
+        "--pretrain",
+        type=str,
+        default="",
     )
     args = parser.parse_args()
 
