@@ -45,6 +45,7 @@ def main(args):
 
 def update_loss_hist_lim(args, data, name="result", xlabel = "Epoch", ylabel = "Loss"):
     from matplotlib import pyplot as plt
+    legend_list = []
     plt.title(name)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
