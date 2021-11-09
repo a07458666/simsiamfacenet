@@ -55,13 +55,14 @@ def update_loss_hist_lim(args, data, name="result", xlabel = "Epoch", ylabel = "
         if (len(data[key]) == 2):
             plt.plot(data[key][0], data[key][1])
             plt.scatter(data[key][0], data[key][1])
-            for x,y in zip(data[key][0],data[key][1]):
-                label = "{:.2f}".format(y * 100)
-                plt.annotate(label, # this is the text
-                            (x,y), # these are the coordinates to position the label
-                            textcoords="offset points", # how to position the text
-                            xytext=(0,-10), # distance from text to points (x,y)
-                            ha='center') # horizontal alignment can be left, right or center
+            if (name == 'HitRatio'):
+                for x,y in zip(data[key][0],data[key][1]):
+                    label = "{:.2f}".format(y * 100)
+                    plt.annotate(label, # this is the text
+                                (x,y), # these are the coordinates to position the label
+                                textcoords="offset points", # how to position the text
+                                xytext=(0,-10), # distance from text to points (x,y)
+                                ha='center') # horizontal alignment can be left, right or center
         else:
             plt.plot(data[key])
             plt.scatter(data[key])
