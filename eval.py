@@ -38,30 +38,34 @@ def main(args):
         
     writerCSV(args, sameDist, diffDist, hitRatioList, valList, farList)
 
-    hitRatioHist(args, kList, hitRatioList)
-    # update_loss_hist(args, {'HitRatio' : [kList, hitRatioList]}, "HitRatio", "k", "hitRatio")
-    update_loss_hist(args, {'Dist' : [farList, valList]}, "VAL_FAR", "FAR", "VAL")
+    update_loss_hist_lim(args, {'HitRatio' : [kList, hitRatioList]}, "HitRatio", "k", "hitRatio")
+    update_loss_hist_lim(args, {'Dist' : [farList, valList]}, "VAL_FAR", "FAR", "VAL")
     
     torch.cuda.empty_cache()
 
-def hitRatioHist(args, kList, hitRatioList):
+def update_loss_hist_lim(args, data, name="result", xlabel = "Epoch", ylabel = "Loss"):
     from matplotlib import pyplot as plt
-    plt.title('hit ratio(k)')
-    plt.xlabel('k')
-    plt.ylabel('hit ratio')
+    plt.title(name)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
     plt.ylim([0,1.1])
-    plt.scatter(kList, hitRatioList)
-    plt.plot(kList, hitRatioList)
+    for key in data.keys():
+        legend_list.append(key)
+        if (len(data[key]) == 2):
+            plt.plot(data[key][0], data[key][1])
+            plt.scatter(data[key][0], data[key][1])
+            for x,y in zip(data[key][0],data[key][1]):
+                label = "{:.2f}".format(y * 100)
+                plt.annotate(label, # this is the text
+                            (x,y), # these are the coordinates to position the label
+                            textcoords="offset points", # how to position the text
+                            xytext=(0,-10), # distance from text to points (x,y)
+                            ha='center') # horizontal alignment can be left, right or center
+        else:
+            plt.plot(data[key])
+            plt.scatter(data[key])
     
-    for x,y in zip(kList,hitRatioList):
-        label = "{:.2f}".format(y * 100)
-        plt.annotate(label, # this is the text
-                     (x,y), # these are the coordinates to position the label
-                     textcoords="offset points", # how to position the text
-                     xytext=(0,-10), # distance from text to points (x,y)
-                     ha='center') # horizontal alignment can be left, right or center
-
-    plt.savefig("{}/{}.png".format(args.output_foloder, 'hitRatio'))
+    plt.savefig("{}/{}.png".format(args.output_foloder, name))
     plt.show()
     plt.clf()
 
