@@ -45,14 +45,15 @@ def main(args):
     torch.cuda.empty_cache()
 
 def hitRatioHist(args, kList, hitRatioList):
-    plt.title.('hit ratio(k)')
+    from matplotlib import pyplot as plt
+    plt.title('hit ratio(k)')
     plt.xlabel('k')
     plt.ylabel('hit ratio')
-    plt.ylim([0,1])
-    plt.scatter(accK, accList)
-    plt.plot(accK, accList)
+    plt.ylim([0,1.1])
+    plt.scatter(kList, hitRatioList)
+    plt.plot(kList, hitRatioList)
     
-    for x,y in zip(accK,accList):
+    for x,y in zip(kList,hitRatioList):
         label = "{:.2f}".format(y * 100)
         plt.annotate(label, # this is the text
                      (x,y), # these are the coordinates to position the label
