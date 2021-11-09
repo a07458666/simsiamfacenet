@@ -38,11 +38,30 @@ def main(args):
         
     writerCSV(args, sameDist, diffDist, hitRatioList, valList, farList)
 
-
-    update_loss_hist(args, {'HitRatio' : [kList, hitRatioList]}, "HitRatio", "k", "hitRatio")
+    hitRatioHist(args, kList, hitRatioList)
+    # update_loss_hist(args, {'HitRatio' : [kList, hitRatioList]}, "HitRatio", "k", "hitRatio")
     update_loss_hist(args, {'Dist' : [farList, valList]}, "VAL_FAR", "FAR", "VAL")
     
     torch.cuda.empty_cache()
+
+def hitRatioHist(args, kList, hitRatioList):
+    plt.title.('hit ratio(k)')
+    plt.xlabel('k')
+    plt.ylabel('hit ratio')
+    plt.ylim([0,1])
+    plt.scatter(accK, accList)
+    plt.plot(accK, accList)
+    
+    for x,y in zip(accK,accList):
+        label = "{:.2f}".format(y * 100)
+        plt.annotate(label, # this is the text
+                     (x,y), # these are the coordinates to position the label
+                     textcoords="offset points", # how to position the text
+                     xytext=(0,-10), # distance from text to points (x,y)
+                     ha='center') # horizontal alignment can be left, right or center
+
+    plt.savefig("{}/{}.png".format(args.output_foloder, 'hitRatio'))
+    plt.show()
 
 def pass_epoch(model, loader, device):
     y_pred_list = []
