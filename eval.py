@@ -12,119 +12,86 @@ from torch import optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 import torchvision.models as models
-
-from src.data_loading.data_loader import BirdImageLoader
-from src.txt_loading.txt_loader import (
-    readClassIdx,
-    readTrainImages,
-    splitDataList,
-)
 from src.helper_functions.augmentations import get_eval_trnsform
+from src.helper_functions.helper import checkGPU, update_loss_hist
 
 
 def main(args):
+    print("=====Eval=====")
     device = checkGPU()
-    class_to_idx = readClassIdx(args)
-    data_list = readTrainImages(args)
-    _, val_data_list, _ = splitDataList(data_list)
-    model = loadModel(args, device)
+    model = loadModel(args).to(device)
     trans = get_eval_trnsform()
-    loader = create_dataloader(args, val_data_list, class_to_idx, trans)
-    val_loss, val_acc_top1, val_acc_top5 = eval_model(
-        args, model, loader, device
-    )
-    print(
-        "val_loss ",
-        val_loss,
-        "val_acc_top1",
-        val_acc_top1,
-        "val_acc_top5 ",
-        val_acc_top5,
-    )
+    loader = create_dataloader(args, trans)
+    hitRatioList, kList, sameDist, diffDist, valList, farList = eval_model(args, model, loader, device)
+    print("===sameDist===")
+    print(sameDist, diffDist)
+    print("===hitRatioList===")
+    print(hitRatioList)
+    print("==valList====")
+
+    print(valList)
+    print("==farList====")
+    print(farList)
+
+    if (args.output_foloder == ""):
+        args.output_foloder = os.path.abspath(os.path.join(args.model_path, os.pardir))
+        
+    writerCSV(args, sameDist, diffDist, hitRatioList, valList, farList)
 
 
-def checkGPU():
-    print("torch version:" + torch.__version__)
-    if torch.cuda.is_available():
-        device = torch.device("cuda")
-        print("Available GPUs: ", end="")
-        for i in range(torch.cuda.device_count()):
-            print(torch.cuda.get_device_name(i), end=" ")
-    else:
-        device = torch.device("cpu")
-        print("CUDA is not available.")
-    return device
+    update_loss_hist(args, {'HitRatio' : [kList, hitRatioList]}, "HitRatio", "k", "hitRatio")
+    update_loss_hist(args, {'Dist' : [farList, valList]}, "VAL_FAR", "FAR", "VAL")
+    
+    torch.cuda.empty_cache()
 
-
-def accuracy(output, target, topk=(1,)):
-    """Computes the accuracy over the k top predictions
-    for the specified values of k"""
+def pass_epoch(model, loader, device):
+    y_pred_list = []
+    y_list = []
     with torch.no_grad():
-        maxk = max(topk)
-        batch_size = target.size(0)
+        for i_batch, image_batch in tqdm(enumerate(loader)):
+            x = image_batch[0].to(device)
+            y = image_batch[1]
 
-        _, pred = output.topk(maxk, 1, True, True)
-        pred = pred.t()
-        correct = pred.eq(target.view(1, -1).expand_as(pred))
-
-        res = []
-        for k in topk:
-            correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
-            res.append(correct_k.mul_(100.0 / batch_size))
-        return res
-
-
-def pass_epoch(model, loader, device, mode="Train"):
-    loss = 0
-    loss_acc_top1 = 0
-    loss_acc_top5 = 0
-    loss_fn = torch.nn.CrossEntropyLoss()
-    for i_batch, image_batch in tqdm(enumerate(loader)):
-        x, y = image_batch[0].to(device), image_batch[1].to(device)
-        if mode == "Train":
-            model.train()
-        elif mode == "Eval":
-            model.eval()
-        else:
-            print("error model mode!")
-        y_pred = model(x)
-
-        loss_batch = loss_fn(y_pred, y)
-        loss_batch_acc_top = accuracy(y_pred, y, topk=(1, 5))
-
-        if mode == "Train":
-            model_optimizer.zero_grad()
-            loss_batch.backward()
-            model_optimizer.step()
-
-        loss += loss_batch.detach().cpu()
-        loss_acc_top1 += loss_batch_acc_top[0]
-        loss_acc_top5 += loss_batch_acc_top[1]
-
-    loss /= i_batch + 1
-    loss_acc_top1 /= i_batch + 1
-    loss_acc_top5 /= i_batch + 1
-
-    return loss, loss_acc_top1, loss_acc_top5
+            y_pred, _ = model(x) #model架構不同要修改
+            y_pred = y_pred.cpu().detach().numpy()
+            for j, data in enumerate(y_pred):
+                y_pred_list.append(data)
+                y_list.append(int(y[j]))
+    return torch.Tensor(y_pred_list).to(device), torch.Tensor(y_list).to(device)
+    # return y_pred_list, y_list
 
 
 def eval_model(args, model, loader, device):
-    with torch.no_grad():
-        val_loss, val_acc_top1, val_acc_top5 = pass_epoch(
-            model, loader, device, "Eval"
-        )
-        torch.cuda.empty_cache()
-    return (
-        val_loss.to("cpu").numpy(),
-        val_acc_top1.to("cpu").numpy(),
-        val_acc_top5.to("cpu").numpy(),
-    )
+    y_pre, y = pass_epoch(model, loader, device)
 
+    # dist = pdist(y_pre)
+    dist = pairwise_distance_torch(y_pre, device)
+    # dist = pairwise_distance_torch(y_pre, device)
+    dist[dist == 0] = float('nan')
 
-def create_dataloader(args, data_list, class_to_idx, trans):
-    dataset_test = BirdImageLoader(
-        args.data_path, data_list, class_to_idx, transform=trans
-    )
+    mask_pos, mask_neg = makemask(y)   
+
+    
+    print("mask_pos", mask_pos)
+    print("mask_neg", mask_neg)
+ 
+    pos = dist * mask_pos.float()
+    pos[pos == 0] = float('nan')
+    neg = dist * mask_neg.float()
+    neg[neg == 0] = float('nan')
+    psame = torch.sum(mask_pos == True)
+    pdiff = torch.sum(mask_neg == True)
+
+    print("psame", psame)
+    print("pdiff", pdiff)
+
+    hitRatioList, kList = calculateHitRatio(dist, mask_pos, mask_neg)
+    sameDist, diffDist = calculateClusterDistClose(pos, neg, psame, pdiff)
+    valList, farList = calculateClusterVAL_FAR(pos, neg, psame, pdiff)
+    return hitRatioList, kList, sameDist, diffDist, valList, farList
+
+def create_dataloader(args, trans):
+    dataset_test = datasets.ImageFolder(args.data_path, transform=trans)
 
     loader = DataLoader(
         dataset_test,
@@ -134,33 +101,125 @@ def create_dataloader(args, data_list, class_to_idx, trans):
     )
     return loader
 
-
-def loadModel(args, device):
+def loadModel(args):
     with torch.no_grad():
-        model = torch.load(args.model_path)
-        model.eval().to(device)
+        model = torch.load(args.model_path).eval()
     return model
 
+def pdist(v):
+    dist = torch.norm(v[:, None] - v, dim=2, p=2)
+    return dist
+
+def pairwise_distance_torch(embeddings, device):
+    """Computes the pairwise distance matrix with numerical stability.
+    output[i, j] = || feature[i, :] - feature[j, :] ||_2
+    Args:
+      embeddings: 2-D Tensor of size [number of data, feature dimension].
+    Returns:
+      pairwise_distances: 2-D Tensor of size [number of data, number of data].
+    """
+
+    # pairwise distance matrix with precise embeddings
+    precise_embeddings = embeddings.to(dtype=torch.float32)
+
+    c1 = torch.pow(precise_embeddings, 2).sum(axis=-1)
+    c2 = torch.pow(precise_embeddings.transpose(0, 1), 2).sum(axis=0)
+    c3 = precise_embeddings @ precise_embeddings.transpose(0, 1)
+
+    c1 = c1.reshape((c1.shape[0], 1))
+    c2 = c2.reshape((1, c2.shape[0]))
+    c12 = c1 + c2
+    pairwise_distances_squared = c12 - 2.0 * c3
+
+    # Deal with numerical inaccuracies. Set small negatives to zero.
+    pairwise_distances_squared = torch.max(pairwise_distances_squared, torch.tensor([0.]).to(device))
+    # Get the mask where the zero distances are at.
+    error_mask = pairwise_distances_squared.clone()
+    error_mask[error_mask > 0.0] = 1.
+    error_mask[error_mask <= 0.0] = 0.
+
+    pairwise_distances = torch.mul(pairwise_distances_squared, error_mask)
+
+    # Explicitly set diagonals to zero.
+    mask_offdiagonals = torch.ones((pairwise_distances.shape[0], pairwise_distances.shape[1])) - torch.diag(torch.ones(pairwise_distances.shape[0]))
+    pairwise_distances = torch.mul(pairwise_distances.to(device), mask_offdiagonals.to(device))
+    return pairwise_distances
+
+def makemask(targets):
+    n = targets.shape[0]
+
+    # find the hardest positive and negative
+    mask_pos = targets.expand(n, n).eq(targets.expand(n, n).t())
+    mask_neg = ~mask_pos
+    print("mask_pos", mask_pos.size())
+    print("mask_neg", mask_neg.size())
+    mask_pos[torch.eye(n).byte()] = 0
+    return mask_pos, mask_neg
+
+def calculateClusterDistClose(pos, neg, psame, pdiff):
+    sameD_val = torch.nansum(pos)
+    diffD_val = torch.nansum(neg)
+    
+    sameD = sameD_val / psame
+    diffD = diffD_val / pdiff
+    print("sameD_val ", sameD_val)
+    print("diffD_val", diffD_val)
+
+    return sameD.cpu().detach().numpy(), diffD.cpu().detach().numpy()
+
+def calculateClusterVAL_FAR(pos, neg, psame, pdiff):
+    valList = []
+    farList = []
+
+    for i in tqdm(range(21)):
+        d = i / 10
+        ta = torch.sum(pos <= d)
+        fa = torch.sum(neg <= d)
+
+        val = ta / psame
+        far = fa / pdiff
+        valList.append(val.cpu().detach().numpy())
+        farList.append(far.cpu().detach().numpy())
+    return valList, farList
+
+def calculateHitRatio(dist, mask_pos, mask_neg, kMax = (5 + 1)):
+    hitRatioList = []
+    kList = []
+    for k in range(1, kMax):
+        kList.append(k)
+        values, indices = torch.topk(dist, k, largest = False)
+        hitCount = torch.sum(torch.gather(mask_pos, 1, indices) == True, 1)
+        hitRatio = torch.mean(hitCount / k)
+        hitRatioList.append(hitRatio.cpu().detach().numpy())
+
+    return hitRatioList, kList
+
+def writerCSV(args, sameDist, diffDist, hitRatioList, valList, farList):
+    import csv
+    filePath = os.path.join(args.output_foloder, 'output.csv')
+    print("filePath", filePath)
+    print("args.output_foloder", args.output_foloder)
+    with open(filePath, 'w', newline='') as csvfile:
+
+        # 以空白分隔欄位，建立 CSV 檔寫入器
+        writer = csv.writer(csvfile, delimiter=' ')
+
+        writer.writerow(['sameDist', str(sameDist)])
+        writer.writerow(['diffDist', str(diffDist)])
+        writer.writerow(['S/D', str(sameDist/diffDist)])
+        writer.writerow(['hitRatio', hitRatioList])
+        writer.writerow(['VAL', valList])
+        writer.writerow(['FAR', farList])
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="310551010 eval bird")
+    parser = argparse.ArgumentParser(description="eval")
     parser.add_argument(
-        "--data_path", type=str, default="../../dataset/bird_datasets/train"
-    )
-    parser.add_argument(
-        "--classes_path",
-        type=str,
-        default="../../dataset/bird_datasets/classes.txt",
-    )
-    parser.add_argument(
-        "--training_labels_path",
-        type=str,
-        default="../../dataset/bird_datasets/training_labels.txt",
+        "--data_path", type=str, default="../../dataset/face_cleaned_data/test"
     )
     parser.add_argument(
         "--model_path",
         type=str,
-        default="./model/model_bird_vit_AllData/checkpoint.pth.tar",
+        default="./model/model_baseline_new_data/checkpoint.pth.tar",
     )
     parser.add_argument(
         "--batch_size",
@@ -172,6 +231,10 @@ if __name__ == "__main__":
         type=int,
         default=16,
     )
-
+    parser.add_argument(
+        "--output_foloder",
+        type=str,
+        default="",
+    )
     args = parser.parse_args()
     main(args)
