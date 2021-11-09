@@ -66,24 +66,16 @@ def eval_model(args, model, loader, device):
 
     # dist = pdist(y_pre)
     dist = pairwise_distance_torch(y_pre, device)
-    # dist = pairwise_distance_torch(y_pre, device)
     dist[dist == 0] = float('nan')
 
     mask_pos, mask_neg = makemask(y)   
 
-    
-    print("mask_pos", mask_pos)
-    print("mask_neg", mask_neg)
- 
-    pos = dist * mask_pos.float()
+    pos = dist * mask_pos.float().to(device)
     pos[pos == 0] = float('nan')
-    neg = dist * mask_neg.float()
+    neg = dist * mask_neg.float().to(device)
     neg[neg == 0] = float('nan')
     psame = torch.sum(mask_pos == True)
     pdiff = torch.sum(mask_neg == True)
-
-    print("psame", psame)
-    print("pdiff", pdiff)
 
     hitRatioList, kList = calculateHitRatio(dist, mask_pos, mask_neg)
     sameDist, diffDist = calculateClusterDistClose(pos, neg, psame, pdiff)
@@ -151,8 +143,8 @@ def makemask(targets):
     # find the hardest positive and negative
     mask_pos = targets.expand(n, n).eq(targets.expand(n, n).t())
     mask_neg = ~mask_pos
-    print("mask_pos", mask_pos.size())
-    print("mask_neg", mask_neg.size())
+#     print("mask_pos", mask_pos.size())
+#     print("mask_neg", mask_neg.size())
     mask_pos[torch.eye(n).byte()] = 0
     return mask_pos, mask_neg
 
@@ -162,8 +154,8 @@ def calculateClusterDistClose(pos, neg, psame, pdiff):
     
     sameD = sameD_val / psame
     diffD = diffD_val / pdiff
-    print("sameD_val ", sameD_val)
-    print("diffD_val", diffD_val)
+#     print("sameD_val ", sameD_val)
+#     print("diffD_val", diffD_val)
 
     return sameD.cpu().detach().numpy(), diffD.cpu().detach().numpy()
 
@@ -178,8 +170,8 @@ def calculateClusterVAL_FAR(pos, neg, psame, pdiff):
 
         val = ta / psame
         far = fa / pdiff
-        valList.append(val.cpu().detach().numpy())
-        farList.append(far.cpu().detach().numpy())
+        valList.append(float(val.cpu().detach().numpy()))
+        farList.append(float(far.cpu().detach().numpy()))
     return valList, farList
 
 def calculateHitRatio(dist, mask_pos, mask_neg, kMax = (5 + 1)):
@@ -190,7 +182,7 @@ def calculateHitRatio(dist, mask_pos, mask_neg, kMax = (5 + 1)):
         values, indices = torch.topk(dist, k, largest = False)
         hitCount = torch.sum(torch.gather(mask_pos, 1, indices) == True, 1)
         hitRatio = torch.mean(hitCount / k)
-        hitRatioList.append(hitRatio.cpu().detach().numpy())
+        hitRatioList.append(float(hitRatio.cpu().detach().numpy()))
 
     return hitRatioList, kList
 
@@ -202,14 +194,10 @@ def writerCSV(args, sameDist, diffDist, hitRatioList, valList, farList):
     with open(filePath, 'w', newline='') as csvfile:
 
         # 以空白分隔欄位，建立 CSV 檔寫入器
-        writer = csv.writer(csvfile, delimiter=' ')
+        writer = csv.writer(csvfile, delimiter=',')
 
-        writer.writerow(['sameDist', str(sameDist)])
-        writer.writerow(['diffDist', str(diffDist)])
-        writer.writerow(['S/D', str(sameDist/diffDist)])
-        writer.writerow(['hitRatio', hitRatioList])
-        writer.writerow(['VAL', valList])
-        writer.writerow(['FAR', farList])
+        writer.writerow(['sameDist', 'diffDist', 'S/D', 'hitRatio', 'VAL', 'FAR'])
+        writer.writerow([str(sameDist), str(diffDist), str(sameDist/diffDist), hitRatioList, valList, farList])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="eval")
