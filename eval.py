@@ -23,15 +23,15 @@ def main(args):
     trans = get_eval_trnsform()
     loader = create_dataloader(args, trans)
     hitRatioList, kList, sameDist, diffDist, valList, farList = eval_model(args, model, loader, device)
-    print("===sameDist===")
-    print(sameDist, diffDist)
-    print("===hitRatioList===")
-    print(hitRatioList)
-    print("==valList====")
+    print("===sameDist, diffDist, S/D===")
+    print(sameDist, diffDist, sameDist / diffDist)
+    print("===hitRatioList(k=1,k=5)===")
+    print(hitRatioList[0], hitRatioList[4])
+#     print("==valList====")
 
-    print(valList)
-    print("==farList====")
-    print(farList)
+#     print(valList)
+#     print("==farList====")
+#     print(farList)
 
     if (args.output_foloder == ""):
         args.output_foloder = os.path.abspath(os.path.join(args.model_path, os.pardir))
@@ -63,6 +63,7 @@ def hitRatioHist(args, kList, hitRatioList):
 
     plt.savefig("{}/{}.png".format(args.output_foloder, 'hitRatio'))
     plt.show()
+    plt.clf()
 
 def pass_epoch(model, loader, device):
     y_pred_list = []
