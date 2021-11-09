@@ -186,7 +186,7 @@ def train(args, model, train_loader, val_loader, writer, device):
             min_train_loss = train_loss
             print("Best, save model, epoch = {}".format(epoch))
             torch.save(
-                model,
+                model.encoder,
                 "{}/checkpoint.pth.tar".format(args.output_foloder),
             )
             stop = 0

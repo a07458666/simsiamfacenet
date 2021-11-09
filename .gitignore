@@ -5,3 +5,4 @@
 .gitattributes
 model/
 runs/
+*.csv

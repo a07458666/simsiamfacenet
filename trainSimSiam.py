@@ -22,7 +22,7 @@ def main(args):
     print("=====SimSiam=====")
     writer = create_writer(args)
     device = checkGPU()
-    model = create_model_simsiam(args).to(device)
+    model = create_model(args).to(device)
     train_loader, val_loader = create_dataloader(args)
     checkOutputDirectoryAndCreate(args.output_foloder)
     train(args, model, train_loader, val_loader, writer, device)
@@ -145,11 +145,11 @@ def train(args, model, train_loader, val_loader, writer, device):
         if train_loss <= min_train_loss:
             min_train_loss = train_loss
             print("Best, save model, epoch = {}".format(epoch))
-            torch.save(model,"{}/checkpoint.pth.tar".format(args.output_foloder))
+            torch.save(model.encoder,"{}/checkpoint.pth.tar".format(args.output_foloder))
             stop = 0
         else:
             stop += 1
-            if stop > 10:
+            if stop > 100:
                 print("early stopping")
                 break
     torch.cuda.empty_cache()
@@ -199,7 +199,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--epochs",
         type=int,
-        default=100,
+        default=200,
     )
     parser.add_argument(
         "--fix_backbone",

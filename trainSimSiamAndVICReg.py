@@ -163,13 +163,12 @@ def train(args, model, train_loader, val_loader, writer, device):
                                 "Var": train_loss_var_history,
                                 "Cov": train_loss_cov_history}, "Loss")
 
+
+        #early stopping
         if train_loss <= min_train_loss:
             min_train_loss = train_loss
             print("Best, save model, epoch = {}".format(epoch))
-            torch.save(
-                model,
-                "{}/checkpoint.pth.tar".format(args.output_foloder),
-            )
+            torch.save(model.encoder,"{}/checkpoint.pth.tar".format(args.output_foloder))
             stop = 0
         else:
             stop += 1
