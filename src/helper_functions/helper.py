@@ -23,14 +23,17 @@ def checkGPU():
         print("CUDA is not available.")
     return device
 
-def update_loss_hist(args, data, name="result"):
+def update_loss_hist(args, data, name="result", xlabel = "Epoch", ylabel = "Loss"):
     legend_list = []
     for key in data.keys():
         legend_list.append(key)
-        plt.plot(data[key])
+        if (len(data[key]) == 2):
+            plt.plot(data[key][0], data[key][1])
+        else:
+            plt.plot(data[key])
     plt.title(name)
-    plt.ylabel("Loss")
-    plt.xlabel("Epoch")
+    plt.ylabel(ylabel)
+    plt.xlabel(xlabel)
     plt.legend(legend_list, loc="center right")
     plt.savefig("{}/{}.png".format(args.output_foloder, name))
     plt.clf()

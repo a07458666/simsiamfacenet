@@ -34,7 +34,7 @@ class FaceImages(Dataset):
     def __getitem__(self, idx):
         img_path = self.img_path_list[idx]
         img = FaceImages.read_image(img_path)
-        target = int(img_path.split('/')[5])
+        target = int(img_path.split('/')[-2])
         return self.transform(img), self.transform(img), target
     
     @staticmethod
