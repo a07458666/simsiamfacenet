@@ -87,7 +87,7 @@ def pass_epoch(model, loader, model_optimizer, loss_fn, scaler, device, mode="Tr
             print("error model mode!")
 
         p1, p2, z1, z2 = model(x1, x2)
-        loss_batch = -(loss_fn(p1, z2).mean() + loss_fn(p2, z1).mean()) * 0.5
+        loss_batch = -(loss_fn(p1, z2.detach()).mean() + loss_fn(p2, z1.detach()).mean()) * 0.5
         # loss_batch_acc_top = accuracy(y_pred, y, topk=(1, 5))
 
         if mode == "Train":
@@ -100,7 +100,6 @@ def pass_epoch(model, loader, model_optimizer, loss_fn, scaler, device, mode="Tr
         loss += loss_batch.item()
     loss /= i_batch + 1
     return loss
-
 
 def train(args, model, train_loader, val_loader, writer, device):
     train_loss_history = []

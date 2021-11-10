@@ -150,11 +150,11 @@ def simsiam_vicreg_loss_func(
     sim_loss = (
         cosine_similarity_loss(
             p1,
-            z2,
+            z2.detach(),
         )
         + cosine_similarity_loss(
             p2,
-            z1,
+            z1.detach(),
         )
     ) / 2
     #     sim_loss = invariance_loss(z1, z2)
