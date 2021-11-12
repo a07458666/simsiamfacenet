@@ -41,7 +41,7 @@ def create_model(args):
 
 
     if args.pretrain_model_path != "":
-        backbone = torch.load(args.pretrain_model_path).to(device)
+        backbone = torch.load(args.pretrain_model_path)
         # checkpoint = torch.load(args.pretrain_model_path, map_location="cpu")
         # msg = backbone.load_state_dict(checkpoint["model"], strict=False)
         # backbone.load_state_dict(torch.load(args.pretrain_model_path)['model']).to(device)
