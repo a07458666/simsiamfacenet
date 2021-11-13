@@ -122,15 +122,15 @@ def pass_epoch(args, model, loader, model_optimizer, tripletLoss_fn, crossEntrop
         loss += loss_batch.item()
         loss_triplet += loss_batch_triplet.item()
         loss_cross += loss_batch_cross.item()
-        acc_top1 += loss_batch_acc_top[0]
-        acc_top5 += loss_batch_acc_top[1]
+        acc_top1 += loss_batch_acc_top[0].cpu()
+        acc_top5 += loss_batch_acc_top[1].cpu()
 
     loss /= i_batch + 1
     loss_triplet /= i_batch + 1
     loss_cross /= i_batch + 1
     acc_top1 /= i_batch + 1
     acc_top5 /= i_batch + 1
-    return loss.cpu().detach(), loss_triplet.cpu().detach(), loss_cross.cpu().detach(), acc_top1.cpu().detach(), acc_top5.cpu().detach()
+    return loss, loss_triplet, loss_cross, acc_top1, acc_top5
 
 def train(args, model, train_loader, val_loader, writer, device):
     train_loss_history = []
