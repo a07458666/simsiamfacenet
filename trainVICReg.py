@@ -129,7 +129,7 @@ def train(args, model, train_loader, val_loader, writer, device):
         momentum=args.momentum,
         weight_decay=args.weight_decay,
     )
-    model_scheduler = CosineAnnealingLR(model_optimizer, T_max=20)
+    model_scheduler = CosineAnnealingLR(model_optimizer, T_max=args.epochs)
     torch.save(model, "{}/checkpoint.pth.tar".format(args.output_foloder))
     loss_fn = vicreg_loss_func
     scaler = GradScaler()
