@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader, SubsetRandomSampler
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from matplotlib import pyplot as plt
 from torch.cuda.amp import GradScaler, autocast
+from torch.nn.utils import clip_grad_norm_
 
 from src.loss_functions.triplet_loss import TripletLoss
 from src.data_loading.data_loader import TripletImageLoader
@@ -115,6 +116,7 @@ def pass_epoch(args, model, loader, model_optimizer, tripletLoss_fn, crossEntrop
         if mode == "Train":
             model_optimizer.zero_grad()
             scaler.scale(loss_batch).backward()
+            clip_grad_norm_(model.parameters(), max_norm=20, norm_type=2)
             scaler.step(model_optimizer)
             scaler.update()
             model_optimizer.step()

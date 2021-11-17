@@ -15,6 +15,7 @@ from torch.cuda.amp import GradScaler, autocast
 from src.data_loading.data_loader import FaceImages
 from torch.utils.tensorboard import SummaryWriter
 from src.loss_functions.vicreg import vicreg_loss_func
+from torch.nn.utils import clip_grad_norm_
 
 from src.helper_functions.helper import set_parameter_requires_grad, checkGPU
 from src.helper_functions.helper import checkOutputDirectoryAndCreate,update_loss_hist
@@ -98,6 +99,7 @@ def pass_epoch(args, model, loader, model_optimizer, loss_fn, scaler, device, mo
         if mode == "Train":
             model_optimizer.zero_grad()
             scaler.scale(loss_batch).backward()
+            clip_grad_norm_(model.parameters(), max_norm=20, norm_type=2)
             scaler.step(model_optimizer)
             scaler.update()
             model_optimizer.step()

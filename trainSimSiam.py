@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from matplotlib import pyplot as plt
 from torch.cuda.amp import GradScaler, autocast
+from torch.nn.utils import clip_grad_norm_
 
 from src.data_loading.data_loader import FaceImages
 from torch.utils.tensorboard import SummaryWriter
@@ -93,6 +94,7 @@ def pass_epoch(model, loader, model_optimizer, loss_fn, scaler, device, mode="Tr
         if mode == "Train":
             model_optimizer.zero_grad()
             scaler.scale(loss_batch).backward()
+            clip_grad_norm_(model.parameters(), max_norm=20, norm_type=2)
             scaler.step(model_optimizer)
             scaler.update()
             model_optimizer.step()
