@@ -5,4 +5,5 @@
 .gitattributes
 model/
 runs/
+wandb/
 *.csv
