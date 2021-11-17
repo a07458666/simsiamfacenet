@@ -3,8 +3,8 @@ import torch
 from matplotlib import pyplot as plt
 
 def checkOutputDirectoryAndCreate(output_foloder):
-    if not os.path.exists(output_foloder):
-        os.makedirs(output_foloder)
+    if not os.path.exists('checkpoints/' + output_foloder):
+        os.makedirs('checkpoints/' + output_foloder)
 
 def set_parameter_requires_grad(model, feature_extracting):
     if feature_extracting:

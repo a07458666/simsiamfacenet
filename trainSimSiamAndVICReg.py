@@ -20,8 +20,19 @@ from src.helper_functions.helper import set_parameter_requires_grad, checkGPU
 from src.helper_functions.helper import checkOutputDirectoryAndCreate,update_loss_hist
 from src.helper_functions.tensorboardWriter import create_writer
 
+try:
+    import wandb
+except ImportError:
+    wandb = None
+    logger.info("Install Weights & Biases for experiment logging via 'pip install wandb' (recommended)")
+
 def main(args):
     print("=====SimSiamAndVICReg=====")
+    if (wandb != None):
+        wandb.init(project="FaceSSL", entity="andy-su", name=args.output_foloder)
+        wandb.config.update(args)
+        wandb.define_metric("loss", summary="min")
+
     writer = create_writer(args)
     device = checkGPU()
     model = create_model(args).to(device)
@@ -127,7 +138,7 @@ def train(args, model, train_loader, val_loader, writer, device):
         weight_decay=args.weight_decay,
     )
     model_scheduler = CosineAnnealingLR(model_optimizer, T_max=args.epochs)
-    torch.save(model, "{}/checkpoint.pth.tar".format(args.output_foloder))
+    torch.save(model, "{}/checkpoint.pth.tar".format('checkpoints/' + args.output_foloder))
     loss_fn = simsiam_vicreg_loss_func
     scaler = GradScaler()
     stop = 0
@@ -148,6 +159,13 @@ def train(args, model, train_loader, val_loader, writer, device):
         )
 
         model_scheduler.step()
+
+        if (wandb != None):
+            wandb.log({"loss/loss": train_loss})
+            wandb.log({"loss/sim": train_loss_sim})
+            wandb.log({"loss/var": train_loss_var})
+            wandb.log({"loss/cov": train_loss_cov})
+            wandb.watch(model)
 
         writer.add_scalars("loss", {"train": train_loss}, epoch)
         writer.add_scalars("loss_sim", {"train": train_loss_sim}, epoch)
@@ -170,7 +188,7 @@ def train(args, model, train_loader, val_loader, writer, device):
         if train_loss <= min_train_loss:
             min_train_loss = train_loss
             print("Best, save model, epoch = {}".format(epoch))
-            torch.save(model.encoder,"{}/checkpoint.pth.tar".format(args.output_foloder))
+            torch.save(model.encoder,"{}/checkpoint.pth.tar".format('checkpoints/' + args.output_foloder))
             stop = 0
         else:
             stop += 1
@@ -219,7 +237,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output_foloder",
         type=str,
-        default="model/model_define",
+        default="model_define",
     )
     parser.add_argument(
         "--epochs",

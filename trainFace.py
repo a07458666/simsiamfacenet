@@ -20,8 +20,23 @@ from src.helper_functions.helper import set_parameter_requires_grad, checkGPU
 from src.helper_functions.helper import checkOutputDirectoryAndCreate,update_loss_hist, accuracy
 from src.helper_functions.tensorboardWriter import create_writer
 
+try:
+    import wandb
+except ImportError:
+    wandb = None
+    logger.info("Install Weights & Biases for experiment logging via 'pip install wandb' (recommended)")
+
+
 def main(args):
     print("=====Facenet=====")
+    if (wandb != None):
+        wandb.init(project="FaceSSL", entity="andy-su", name=args.output_foloder)
+        wandb.config.update(args)
+        wandb.define_metric("loss", summary="min")
+        wandb.define_metric("cross", summary="min")
+        wandb.define_metric("triplet", summary="min")
+        wandb.define_metric("acc", summary="max")
+
     writer = create_writer(args)
     device = checkGPU()
     model = create_model(args).to(device)
@@ -149,7 +164,7 @@ def train(args, model, train_loader, val_loader, writer, device):
         weight_decay=args.weight_decay,
     )
     model_scheduler = CosineAnnealingLR(model_optimizer, T_max=args.epochs)
-    torch.save(model, "{}/checkpoint.pth.tar".format(args.output_foloder))
+    torch.save(model, "{}/checkpoint.pth.tar".format('checkpoints/' + args.output_foloder))
     tripletLoss_fn = TripletLoss(device)
     crossEntropyLoss_fn = torch.nn.CrossEntropyLoss()
     scaler = GradScaler()
@@ -184,6 +199,19 @@ def train(args, model, train_loader, val_loader, writer, device):
             )
         model_scheduler.step()
 
+        if (wandb != None):
+            wandb.log({"loss/train": train_loss})
+            wandb.log({"loss/val": val_loss})
+            wandb.log({"triplet/train": train_loss_triplet})
+            wandb.log({"triplet/val": val_loss_triplet})
+            wandb.log({"cross/train": train_loss_cross})
+            wandb.log({"cross/val": val_loss_cross})
+            wandb.log({"top1/train": train_acc_top1})
+            wandb.log({"top1/val": val_acc_top1})
+            wandb.log({"top5/train": train_acc_top5})
+            wandb.log({"top5/val": val_acc_top5})
+            wandb.watch(model)
+
         writer.add_scalars("loss", {"train": train_loss, "val": val_loss}, epoch)
         writer.add_scalars("triplet", {"train": train_loss_triplet, "val": val_loss_triplet}, epoch)
         writer.add_scalars("cross", {"train": train_loss_cross, "val": val_loss_cross}, epoch)
@@ -208,7 +236,7 @@ def train(args, model, train_loader, val_loader, writer, device):
             print("Best, save model, epoch = {}".format(epoch))
             torch.save(
                 model,
-                "{}/checkpoint.pth.tar".format(args.output_foloder),
+                "{}/checkpoint.pth.tar".format("checkpoints/" + args.output_foloder),
             )
             stop = 0
         else:
@@ -227,7 +255,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=64,
+        default=32,
     )
     parser.add_argument(
         "--workers",
@@ -258,7 +286,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output_foloder",
         type=str,
-        default="model/model_define",
+        default="model_define",
     )
     parser.add_argument(
         "--epochs",
