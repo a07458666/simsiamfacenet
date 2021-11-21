@@ -131,7 +131,7 @@ def pass_epoch(args, model, loader, model_optimizer, tripletLoss_fn, crossEntrop
         if mode == "Train":
             model_optimizer.zero_grad()
             scaler.scale(loss_batch).backward()
-            clip_grad_norm_(model.parameters(), max_norm=20, norm_type=2)
+            clip_grad_norm_(model.parameters(), max_norm=20.)
             scaler.step(model_optimizer)
             scaler.update()
             model_optimizer.step()
@@ -210,7 +210,7 @@ def train(args, model, train_loader, val_loader, writer, device):
             wandb.log({"top1/val": val_acc_top1})
             wandb.log({"top5/train": train_acc_top5})
             wandb.log({"top5/val": val_acc_top5})
-            wandb.watch(model)
+            wandb.watch(model,log = "all", log_graph=True)
 
         writer.add_scalars("loss", {"train": train_loss, "val": val_loss}, epoch)
         writer.add_scalars("triplet", {"train": train_loss_triplet, "val": val_loss_triplet}, epoch)

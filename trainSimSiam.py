@@ -104,7 +104,7 @@ def pass_epoch(model, loader, model_optimizer, loss_fn, scaler, device, mode="Tr
         if mode == "Train":
             model_optimizer.zero_grad()
             scaler.scale(loss_batch).backward()
-            clip_grad_norm_(model.parameters(), max_norm=20, norm_type=2)
+            clip_grad_norm_(model.parameters(), max_norm=20)
             scaler.step(model_optimizer)
             scaler.update()
             model_optimizer.step()
@@ -147,7 +147,7 @@ def train(args, model, train_loader, val_loader, writer, device):
 
         if (wandb != None):
             wandb.log({"loss/train": train_loss})
-            wandb.watch(model)
+            wandb.watch(model,log = "all", log_graph=True)
 
         writer.add_scalars(
             "loss", {"train": train_loss}, epoch
