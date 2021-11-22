@@ -35,7 +35,7 @@ def update_loss_hist(args, data, name="result", xlabel = "Epoch", ylabel = "Loss
     plt.ylabel(ylabel)
     plt.xlabel(xlabel)
     plt.legend(legend_list, loc="center right")
-    plt.savefig("{}/{}.png".format(args.output_foloder, name))
+    plt.savefig("{}/{}.png".format('checkpoints/' + args.output_foloder, name))
     plt.clf()
 
 def accuracy(output, target, topk=(1,)):
