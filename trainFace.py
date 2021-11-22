@@ -29,6 +29,7 @@ except ImportError:
 
 def main(args):
     print("=====Facenet=====")
+    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     if (wandb != None):
         wandb.init(project="FaceSSL", entity="andy-su", name=args.output_foloder)
         wandb.config.update(args)
@@ -327,6 +328,11 @@ if __name__ == "__main__":
         "--pretrain",
         type=str,
         default="",
+    )
+    parser.add_argument(
+        "--gpu",
+        type=str,
+        default="0",
     )
     args = parser.parse_args()
 
