@@ -29,7 +29,8 @@ except ImportError:
 
 def main(args):
     print("=====Facenet=====")
-    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
+    if (args.gpu != ""):
+        os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     if (wandb != None):
         wandb.init(project="FaceSSL", entity="andy-su", name=args.output_foloder)
         wandb.config.update(args)
@@ -165,7 +166,6 @@ def train(args, model, train_loader, val_loader, writer, device):
         weight_decay=args.weight_decay,
     )
     model_scheduler = CosineAnnealingLR(model_optimizer, T_max=args.epochs)
-    torch.save(model, "{}/checkpoint.pth.tar".format('checkpoints/' + args.output_foloder))
     tripletLoss_fn = TripletLoss(device)
     crossEntropyLoss_fn = torch.nn.CrossEntropyLoss()
     scaler = GradScaler()
@@ -237,7 +237,7 @@ def train(args, model, train_loader, val_loader, writer, device):
             print("Best, save model, epoch = {}".format(epoch))
             torch.save(
                 model,
-                "{}/checkpoint.pth.tar".format("checkpoints/" + args.output_foloder),
+                "model/{}/checkpoint.pth.tar".format(args.output_foloder),
             )
             stop = 0
         else:

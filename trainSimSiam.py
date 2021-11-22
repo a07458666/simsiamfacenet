@@ -27,6 +27,8 @@ except ImportError:
 
 def main(args):
     print("=====SimSiam=====")
+    if (args.gpu != ""):
+        os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     if (wandb != None):
         wandb.init(project="FaceSSL", entity="andy-su", name=args.output_foloder)
         wandb.config.update(args)
@@ -124,7 +126,7 @@ def train(args, model, train_loader, val_loader, writer, device):
         weight_decay=args.weight_decay,
     )
     model_scheduler = CosineAnnealingLR(model_optimizer, T_max=args.epochs)
-    torch.save(model, "{}/checkpoint.pth.tar".format('checkpoints/' + args.output_foloder))
+    torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
     loss_fn = nn.CosineSimilarity(dim=1).to(device)
     scaler = GradScaler()
     stop = 0
@@ -160,7 +162,7 @@ def train(args, model, train_loader, val_loader, writer, device):
         if train_loss <= min_train_loss:
             min_train_loss = train_loss
             print("Best, save model, epoch = {}".format(epoch))
-            torch.save(model.encoder,"{}/checkpoint.pth.tar".format('checkpoints/' + args.output_foloder))
+            torch.save(model.encoder,"model/{}/checkpoint.pth.tar".format(args.output_foloder))
             stop = 0
         else:
             stop += 1
@@ -225,6 +227,11 @@ if __name__ == "__main__":
         "--dim",
         type=int,
         default=512,
+    )
+    parser.add_argument(
+        "--gpu",
+        type=str,
+        default="",
     )
     args = parser.parse_args()
 

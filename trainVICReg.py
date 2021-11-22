@@ -23,6 +23,8 @@ from src.helper_functions.tensorboardWriter import create_writer
 
 def main(args):
     print("=====VICReg=====")
+    if (args.gpu != ""):
+        os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     if (wandb != None):
         wandb.init(project="FaceSSL", entity="andy-su", name=args.output_foloder)
         wandb.config.update(args)
@@ -137,7 +139,7 @@ def train(args, model, train_loader, val_loader, writer, device):
         weight_decay=args.weight_decay,
     )
     model_scheduler = CosineAnnealingLR(model_optimizer, T_max=args.epochs)
-    torch.save(model, "{}/checkpoint.pth.tar".format('checkpoints/' + args.output_foloder))
+    torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
     loss_fn = vicreg_loss_func
     scaler = GradScaler()
     stop = 0
@@ -201,7 +203,7 @@ def train(args, model, train_loader, val_loader, writer, device):
             print("Best, save model, epoch = {}".format(epoch))
             torch.save(
                 model.encoder,
-                "{}/checkpoint.pth.tar".format('checkpoints/' + args.output_foloder),
+                "model/{}/checkpoint.pth.tar".format(args.output_foloder),
             )
             stop = 0
         else:
@@ -282,6 +284,11 @@ if __name__ == "__main__":
         "--cov_weight",
         type=float,
         default=1e-2,
+    )
+    parser.add_argument(
+        "--gpu",
+        type=str,
+        default="",
     )
     args = parser.parse_args()
 

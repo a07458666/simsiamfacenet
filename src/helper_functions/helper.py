@@ -3,8 +3,8 @@ import torch
 from matplotlib import pyplot as plt
 
 def checkOutputDirectoryAndCreate(output_foloder):
-    if not os.path.exists('checkpoints/' + output_foloder):
-        os.makedirs('checkpoints/' + output_foloder)
+    if not os.path.exists('model/' + output_foloder):
+        os.makedirs('model/' + output_foloder)
 
 def set_parameter_requires_grad(model, feature_extracting):
     if feature_extracting:
@@ -35,7 +35,7 @@ def update_loss_hist(args, data, name="result", xlabel = "Epoch", ylabel = "Loss
     plt.ylabel(ylabel)
     plt.xlabel(xlabel)
     plt.legend(legend_list, loc="center right")
-    plt.savefig("{}/{}.png".format('checkpoints/' + args.output_foloder, name))
+    plt.savefig("{}/{}.png".format('model/' + args.output_foloder, name))
     plt.clf()
 
 def accuracy(output, target, topk=(1,)):
