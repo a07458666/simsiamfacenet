@@ -101,8 +101,8 @@ def create_dataloader(args):
     )
     print("====")
     print("class count: ", len(np.unique(dataset_train.targets, return_counts=True)[0]))
-    print("train len", dataset_train.__len__())
-    print("val len", dataset_val.__len__())
+    print("train len", train_inds.__len__())
+    print("val len", val_inds.__len__())
     return train_loader, val_loader
 
 def pass_epoch(args, model, loader, model_optimizer, tripletLoss_fn, crossEntropyLoss_fn, scaler, device, mode="Train"):
