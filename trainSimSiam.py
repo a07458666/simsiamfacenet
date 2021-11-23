@@ -107,7 +107,7 @@ def pass_epoch(model, loader, model_optimizer, loss_fn, scaler, device, mode="Tr
         if mode == "Train":
             model_optimizer.zero_grad()
             scaler.scale(loss_batch).backward()
-            clip_grad_norm_(model.parameters(), max_norm=20)
+            clip_grad_norm_(model.parameters(), max_norm=args.max_norm)
             scaler.step(model_optimizer)
             scaler.update()
             model_optimizer.step()
@@ -233,6 +233,11 @@ if __name__ == "__main__":
         "--gpu",
         type=str,
         default="",
+    )
+    parser.add_argument(
+        "--max_norm",
+        type=float,
+        default=20,
     )
     args = parser.parse_args()
 
