@@ -144,7 +144,6 @@ def pass_epoch(args, model, loader, model_optimizer, tripletLoss_fn, crossEntrop
         loss_cross += loss_batch_cross.item()
         acc_top1 += loss_batch_acc_top[0].cpu()
         acc_top5 += loss_batch_acc_top[1].cpu()
-        break
 
     loss /= i_batch + 1
     loss_triplet /= i_batch + 1
