@@ -29,6 +29,7 @@ except ImportError:
 
 def main(args):
     print("=====Facenet=====")
+    os.environ["WANDB_WATCH"] = "false"
     if (args.gpu != ""):
         os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     if (wandb != None):
@@ -143,6 +144,7 @@ def pass_epoch(args, model, loader, model_optimizer, tripletLoss_fn, crossEntrop
         loss_cross += loss_batch_cross.item()
         acc_top1 += loss_batch_acc_top[0].cpu()
         acc_top5 += loss_batch_acc_top[1].cpu()
+        break
 
     loss /= i_batch + 1
     loss_triplet /= i_batch + 1
@@ -235,10 +237,7 @@ def train(args, model, train_loader, val_loader, writer, device):
         if val_loss <= min_val_loss:
             min_val_loss = val_loss
             print("Best, save model, epoch = {}".format(epoch))
-            torch.save(
-                model,
-                "model/{}/checkpoint.pth.tar".format(args.output_foloder),
-            )
+            torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
             stop = 0
         else:
             stop += 1

@@ -23,6 +23,7 @@ from src.helper_functions.tensorboardWriter import create_writer
 
 def main(args):
     print("=====VICReg=====")
+    os.environ["WANDB_WATCH"] = "false"
     if (args.gpu != ""):
         os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     if (wandb != None):

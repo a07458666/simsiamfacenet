@@ -28,6 +28,7 @@ except ImportError:
 
 def main(args):
     print("=====SimSiamAndVICReg=====")
+    os.environ["WANDB_WATCH"] = "false"
     if (args.gpu != ""):
         os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     if (wandb != None):
