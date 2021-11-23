@@ -280,7 +280,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max_norm",
         type=float,
-        default=20,
+        default=1e4,
     )
     args = parser.parse_args()
 
