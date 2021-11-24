@@ -107,7 +107,7 @@ def pass_epoch(args, model, loader, model_optimizer, loss_fn, scaler, device, mo
         if mode == "Train":
             model_optimizer.zero_grad()
             scaler.scale(loss_batch).backward()
-            clip_grad_norm_(model.parameters(), max_norm=args.max_norm)
+            clip_grad_norm_(model.parameters(), max_norm=args.max_norm, error_if_nonfinite = False)
             scaler.step(model_optimizer)
             scaler.update()
             model_optimizer.step()
@@ -198,7 +198,8 @@ def train(args, model, train_loader, val_loader, writer, device):
                         "Sim": train_loss_sim_history,
                         "Var": train_loss_var_history,
                         "Cov": train_loss_cov_history}, "Loss")
-
+                        
+        torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
         # if train_loss <= min_train_loss:
         #     min_train_loss = train_loss
         #     print("Best, save model, epoch = {}".format(epoch))

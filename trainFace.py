@@ -134,7 +134,7 @@ def pass_epoch(args, model, loader, model_optimizer, tripletLoss_fn, crossEntrop
         if mode == "Train":
             model_optimizer.zero_grad()
             scaler.scale(loss_batch).backward()
-            clip_grad_norm_(model.parameters(), max_norm=args.max_norm)
+            clip_grad_norm_(model.parameters(), max_norm=args.max_norm, error_if_nonfinite = False)
             scaler.step(model_optimizer)
             scaler.update()
             model_optimizer.step()
@@ -233,6 +233,7 @@ def train(args, model, train_loader, val_loader, writer, device):
         update_loss_hist(args, {"train": train_acc_top1_history, "val": val_acc_top1_history}, "Top1")
         update_loss_hist(args, {"train": train_acc_top5_history, "val": val_acc_top5_history}, "Top5")
 
+        torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
         # if val_loss <= min_val_loss:
         #     min_val_loss = val_loss
         #     print("Best, save model, epoch = {}".format(epoch))
