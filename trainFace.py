@@ -210,16 +210,19 @@ def train(args, model, train_loader, val_loader, writer, device):
         model_scheduler.step()
 
         if (wandb != None):
-            wandb.log({"loss/train": train_loss, 'epoch': epoch})
-            wandb.log({"loss/val": val_loss, 'epoch': epoch})
-            wandb.log({"triplet/train": train_loss_triplet, 'epoch': epoch})
-            wandb.log({"triplet/val": val_loss_triplet, 'epoch': epoch})
-            wandb.log({"cross/train": train_loss_cross, 'epoch': epoch})
-            wandb.log({"cross/val": val_loss_cross, 'epoch': epoch})
-            wandb.log({"top1/train": train_acc_top1, 'epoch': epoch})
-            wandb.log({"top1/val": val_acc_top1, 'epoch': epoch})
-            wandb.log({"top5/train": train_acc_top5, 'epoch': epoch})
-            wandb.log({"top5/val": val_acc_top5, 'epoch': epoch})
+            logMsg = {}
+            logMsg["epoch"] = epoch
+            logMsg["loss/train"] = train_loss
+            logMsg["loss/val"] = val_loss
+            logMsg["triplet/train"] = train_loss_triplet
+            logMsg["triplet/val"] = val_loss_triplet
+            logMsg["cross/train"] = train_loss_cross
+            logMsg["cross/val"] = val_loss_cross
+            logMsg["top1/train"] = train_acc_top1
+            logMsg["top1/val"] = val_acc_top1
+            logMsg["top5/train"] = train_acc_top5
+            logMsg["top5/val"] = val_acc_top5
+            wandb.log(logMsg)
             wandb.watch(model,log = "all", log_graph=True)
 
         writer.add_scalars("loss", {"train": train_loss, "val": val_loss}, epoch)
