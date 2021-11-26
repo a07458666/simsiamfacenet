@@ -173,10 +173,10 @@ def train(args, model, train_loader, val_loader, writer, device):
         model_scheduler.step()
 
         if (wandb != None):
-            wandb.log({"loss/loss": train_loss})
-            wandb.log({"loss/sim": train_loss_sim})
-            wandb.log({"loss/var": train_loss_var})
-            wandb.log({"loss/cov": train_loss_cov})
+            wandb.log({"loss/loss": train_loss, 'epoch': epoch})
+            wandb.log({"loss/sim": train_loss_sim, 'epoch': epoch})
+            wandb.log({"loss/var": train_loss_var, 'epoch': epoch})
+            wandb.log({"loss/cov": train_loss_cov, 'epoch': epoch})
             wandb.watch(model,log = "all", log_graph=True)
 
         writer.add_scalars("loss", {"train": train_loss}, epoch)

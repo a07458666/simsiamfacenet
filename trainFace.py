@@ -127,6 +127,14 @@ def pass_epoch(args, model, loader, model_optimizer, tripletLoss_fn, crossEntrop
         loss_batch_triplet = tripletLoss_fn(projector_out, y)
 
         loss_batch_cross = crossEntropyLoss_fn(predictor_out, y)
+        if torch.isnan(loss_batch_triplet):
+            print("loss_batch_triplet is nan")
+        if torch.isinf(loss_batch_triplet):
+            print("loss_batch_triplet is inf")
+        if torch.isnan(loss_batch_cross):
+            print("loss_batch_cross is nan")
+        if torch.isinf(loss_batch_cross):
+            print("loss_batch_cross is inf")
         loss_batch = loss_batch_cross * args.alpha + loss_batch_triplet * (1. - args.alpha)
 
         loss_batch_acc_top = accuracy(predictor_out, y, topk=(1, 5))
@@ -202,16 +210,16 @@ def train(args, model, train_loader, val_loader, writer, device):
         model_scheduler.step()
 
         if (wandb != None):
-            wandb.log({"loss/train": train_loss})
-            wandb.log({"loss/val": val_loss})
-            wandb.log({"triplet/train": train_loss_triplet})
-            wandb.log({"triplet/val": val_loss_triplet})
-            wandb.log({"cross/train": train_loss_cross})
-            wandb.log({"cross/val": val_loss_cross})
-            wandb.log({"top1/train": train_acc_top1})
-            wandb.log({"top1/val": val_acc_top1})
-            wandb.log({"top5/train": train_acc_top5})
-            wandb.log({"top5/val": val_acc_top5})
+            wandb.log({"loss/train": train_loss, 'epoch': epoch})
+            wandb.log({"loss/val": val_loss, 'epoch': epoch})
+            wandb.log({"triplet/train": train_loss_triplet, 'epoch': epoch})
+            wandb.log({"triplet/val": val_loss_triplet, 'epoch': epoch})
+            wandb.log({"cross/train": train_loss_cross, 'epoch': epoch})
+            wandb.log({"cross/val": val_loss_cross, 'epoch': epoch})
+            wandb.log({"top1/train": train_acc_top1, 'epoch': epoch})
+            wandb.log({"top1/val": val_acc_top1, 'epoch': epoch})
+            wandb.log({"top5/train": train_acc_top5, 'epoch': epoch})
+            wandb.log({"top5/val": val_acc_top5, 'epoch': epoch})
             wandb.watch(model,log = "all", log_graph=True)
 
         writer.add_scalars("loss", {"train": train_loss, "val": val_loss}, epoch)
@@ -336,7 +344,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max_norm",
         type=float,
-        default=1e4,
+        default=1e20,
     )
     args = parser.parse_args()
 
