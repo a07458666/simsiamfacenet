@@ -95,7 +95,6 @@ def create_dataloader(args):
     )
 
     print("====")
-    print("class count: ", len(np.unique(dataset_train.targets, return_counts=True)[0]))
     print("train len", train_inds.__len__())
     print("val len", val_inds.__len__())
     return train_loader, val_loader
