@@ -7,7 +7,7 @@ import math
 from torch import nn
 from tqdm import tqdm
 from torch import optim
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, SubsetRandomSampler
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from matplotlib import pyplot as plt
 from torch.cuda.amp import GradScaler, autocast
@@ -71,19 +71,24 @@ def create_dataloader(args):
     trans_aug = get_aug_trnsform()
     trans_eval = get_eval_trnsform()
     dataset_train = FaceImages(args.data_path, transform=trans_aug)
-    dataset_val = FaceImages(args.data_path, transform=trans_eval)
+    img_inds = np.arange(len(dataset_train))
+    np.random.shuffle(img_inds)
+    train_inds = img_inds[:int(0.8 * len(img_inds))]
+    val_inds = img_inds[int(0.8 * len(img_inds)):]
 
     train_loader = DataLoader(
         dataset_train,
         num_workers=args.workers,
         batch_size=args.batch_size,
-        shuffle=True,
+        # shuffle=True,
+        sampler=SubsetRandomSampler(train_inds)
     )
     val_loader = DataLoader(
         dataset_val,
         num_workers=args.workers,
         batch_size=args.batch_size,
-        shuffle=True,
+        # shuffle=True,
+        sampler=SubsetRandomSampler(val_inds)
     )
 
     print("train len", dataset_train.__len__())
