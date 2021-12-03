@@ -87,7 +87,7 @@ def create_dataloader(args):
         sampler=SubsetRandomSampler(train_inds)
     )
     val_loader = DataLoader(
-        dataset_val,
+        dataset_train,
         num_workers=args.workers,
         batch_size=args.batch_size,
         # shuffle=True,
