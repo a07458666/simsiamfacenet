@@ -64,10 +64,13 @@ def create_model(args):
         # checkpoint = torch.load(args.pretrain_model_path, map_location="cpu")
         # msg = backbone.load_state_dict(checkpoint["model"], strict=False)
         # backbone.load_state_dict(torch.load(args.pretrain_model_path)['model']).to(device)
+    
 
     set_parameter_requires_grad(backbone, args.fix_backbone)
 
     model = Facenet(backbone, dim = args.dim, prev_dim = 512, pred_dim = 512)
+    if args.resume_model_path != "":
+        model = torch.load(args.resume_model_path)
     return model
 
 
@@ -129,6 +132,8 @@ def pass_epoch(args, model, loader, model_optimizer, tripletLoss_fn, crossEntrop
         loss_batch_cross = crossEntropyLoss_fn(predictor_out, y)
         if torch.isnan(loss_batch_triplet):
             print("loss_batch_triplet is nan")
+            print(predictor_out)
+            print(y)
         if torch.isinf(loss_batch_triplet):
             print("loss_batch_triplet is inf")
         if torch.isnan(loss_batch_cross):
@@ -142,7 +147,8 @@ def pass_epoch(args, model, loader, model_optimizer, tripletLoss_fn, crossEntrop
         if mode == "Train":
             model_optimizer.zero_grad()
             scaler.scale(loss_batch).backward()
-            clip_grad_norm_(model.parameters(), max_norm=args.max_norm, error_if_nonfinite = False)
+            if (max_norm=args.max_norm != -1):
+                clip_grad_norm_(model.parameters(), max_norm=args.max_norm, error_if_nonfinite = False)
             scaler.step(model_optimizer)
             scaler.update()
             model_optimizer.step()
@@ -295,6 +301,11 @@ if __name__ == "__main__":
         default="",
     )
     parser.add_argument(
+        "--resume_model_path",
+        type=str,
+        default="",
+    )
+    parser.add_argument(
         "--output_foloder",
         type=str,
         default="model_define",
@@ -347,7 +358,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max_norm",
         type=float,
-        default=1e20,
+        default=-1,
     )
     args = parser.parse_args()
 

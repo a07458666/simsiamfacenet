@@ -107,7 +107,8 @@ def pass_epoch(model, loader, model_optimizer, loss_fn, scaler, device, mode="Tr
         if mode == "Train":
             model_optimizer.zero_grad()
             scaler.scale(loss_batch).backward()
-            clip_grad_norm_(model.parameters(), max_norm=args.max_norm, error_if_nonfinite = False)
+            if (max_norm=args.max_norm != -1):
+                clip_grad_norm_(model.parameters(), max_norm=args.max_norm, error_if_nonfinite = False)
             scaler.step(model_optimizer)
             scaler.update()
             model_optimizer.step()
@@ -238,7 +239,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--max_norm",
         type=float,
-        default=1e4,
+        default=-1,
     )
     args = parser.parse_args()
 
