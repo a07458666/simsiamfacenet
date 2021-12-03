@@ -47,7 +47,12 @@ def create_model(args):
     from facenet_pytorch import InceptionResnetV1
     from src.models.simsiam import SimSiam
 
-    backbone = InceptionResnetV1()
+    if (args.pretrain == "casia-webface"):
+        backbone = InceptionResnetV1(pretrained = 'casia-webface')
+    elif (args.pretrain == "vggface2"):
+        backbone = InceptionResnetV1(pretrained = 'vggface2')
+    else:
+        backbone = InceptionResnetV1()
 
     if args.pretrain_model_path != "":
         backbone = torch.load(args.pretrain_model_path).to(device)
@@ -112,7 +117,7 @@ def pass_epoch(args, model, loader, model_optimizer, loss_fn, scaler, device, mo
         if mode == "Train":
             model_optimizer.zero_grad()
             scaler.scale(loss_batch).backward()
-            if (max_norm=args.max_norm != -1):
+            if (args.max_norm != -1):
                 clip_grad_norm_(model.parameters(), max_norm=args.max_norm, error_if_nonfinite = False)
             scaler.step(model_optimizer)
             scaler.update()
@@ -275,6 +280,11 @@ if __name__ == "__main__":
         "--cov_weight",
         type=float,
         default=1e-2,
+    )
+    parser.add_argument(
+        "--pretrain",
+        type=str,
+        default="",
     )
     parser.add_argument(
         "--gpu",

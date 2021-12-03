@@ -147,7 +147,7 @@ def pass_epoch(args, model, loader, model_optimizer, tripletLoss_fn, crossEntrop
         if mode == "Train":
             model_optimizer.zero_grad()
             scaler.scale(loss_batch).backward()
-            if (max_norm=args.max_norm != -1):
+            if (args.max_norm != -1):
                 clip_grad_norm_(model.parameters(), max_norm=args.max_norm, error_if_nonfinite = False)
             scaler.step(model_optimizer)
             scaler.update()
