@@ -50,12 +50,12 @@ To evaluate my model, run:
 python eval.py --data_path <eval_data_path> --classes_path <classes.txt> --training_labels_path <training_labels.txt> --model_path <model_path>
 ```
 
-## Reproduceing Submission
+## Inference
 
 [model link]()
 
 ```inference
-python inference.py --data_path <test_image_path> --classes_path <classes.txt> --test_filename_path <testing_img_order.txt> --model_path <model_path>
+python inference.py --data_path <test_data_path> --model_path <model_path>
 ```
 >📋 Will output `answer.txt`
 ## Pre-trained Models
@@ -77,6 +77,6 @@ Our model achieves the following performance on :
 
 ### Image Classification
 
-| Model name         | Top 1 Accuracy  | Top 5 Accuracy |
+| Model name         | hit ratio(k=1)  | hit ratio(k=5) |
 | ------------------ |---------------- | -------------- |
-| My best model      |     62.17%      |     52.45%     |
+| My best model      |          %      |          %     |

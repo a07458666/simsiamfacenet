@@ -27,11 +27,6 @@ def main(args):
     print(sameDist, diffDist, sameDist / diffDist)
     print("===hitRatioList(k=1,k=5)===")
     print(hitRatioList[0], hitRatioList[4])
-#     print("==valList====")
-
-#     print(valList)
-#     print("==farList====")
-#     print(farList)
 
     if (args.output_foloder == ""):
         args.output_foloder = os.path.abspath(os.path.join(args.model_path, os.pardir))
@@ -79,8 +74,8 @@ def pass_epoch(model, loader, device):
             x = image_batch[0].to(device)
             y = image_batch[1]
 
-            # y_pred, _ = model(x) #model架構不同要修改
-            y_pred = model(x) #model架構不同要修改
+            y_pred, _ = model(x) #model架構不同要修改
+            # y_pred = model(x) #model架構不同要修改
             y_pred = y_pred.cpu().detach().numpy()
             for j, data in enumerate(y_pred):
                 y_pred_list.append(data)
