@@ -74,6 +74,6 @@ class SimSiam(nn.Module):
 
         # compute features for one view
         y = self.encoder(x) # NxC
-        z = self.projector(y) # NxC
+#         z = self.projector(y) # NxC
 
-        return z
+        return y

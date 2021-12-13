@@ -17,7 +17,7 @@ class GaussianBlur(object):
         x = x.filter(ImageFilter.GaussianBlur(radius=sigma))
         return x
 
-def get_aug_trnsform(imageSize = 224):
+def get_aug_trnsform(imageSize = 80):
     transform = transforms.Compose([
         transforms.RandomResizedCrop(imageSize, scale=(0.2, 1.)),
         transforms.RandomApply([
