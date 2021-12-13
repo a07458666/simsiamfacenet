@@ -76,29 +76,30 @@ def create_dataloader(args):
     trans_aug = get_aug_trnsform()
     trans_eval = get_eval_trnsform()
     dataset_train = FaceImages(args.data_path, transform=trans_aug)
-    img_inds = np.arange(len(dataset_train))
-    np.random.shuffle(img_inds)
-    train_inds = img_inds[:int(0.8 * len(img_inds))]
-    val_inds = img_inds[int(0.8 * len(img_inds)):]
+    # img_inds = np.arange(len(dataset_train))
+    # np.random.shuffle(img_inds)
+    # train_inds = img_inds[:int(0.8 * len(img_inds))]
+    # val_inds = img_inds[int(0.8 * len(img_inds)):]
 
     train_loader = DataLoader(
         dataset_train,
         num_workers=args.workers,
         batch_size=args.batch_size,
-        # shuffle=True,
-        sampler=SubsetRandomSampler(train_inds)
+        shuffle=True,
+        # sampler=SubsetRandomSampler(train_inds)
     )
     val_loader = DataLoader(
         dataset_train,
         num_workers=args.workers,
         batch_size=args.batch_size,
-        # shuffle=True,
-        sampler=SubsetRandomSampler(val_inds)
+        shuffle=True,
+        # sampler=SubsetRandomSampler(val_inds)
     )
 
-    print("====")
-    print("train len", train_inds.__len__())
-    print("val len", val_inds.__len__())
+    # print("====")
+    # print("train len", train_inds.__len__())
+    # print("val len", val_inds.__len__())
+    print("train len", dataset_train.__len__())
     return train_loader, val_loader
 
 def pass_epoch(args, model, loader, model_optimizer, loss_fn, scaler, device, mode="Train"):
