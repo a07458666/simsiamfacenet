@@ -14,10 +14,13 @@ from torchvision import datasets, transforms
 import torchvision.models as models
 from src.helper_functions.augmentations import get_eval_trnsform
 from src.helper_functions.helper import checkGPU, update_loss_hist
+from matplotlib import pyplot as plt
 
 
 def main(args):
     print("=====Eval=====")
+    if (args.output_foloder == ""):
+        args.output_foloder = os.path.abspath(os.path.join(args.model_path, os.pardir))
     device = checkGPU()
     model = loadModel(args).to(device)
     trans = get_eval_trnsform()
@@ -28,9 +31,6 @@ def main(args):
     print("===hitRatioList(k=1,k=5)===")
     print(hitRatioList[0], hitRatioList[4])
 
-    if (args.output_foloder == ""):
-        args.output_foloder = os.path.abspath(os.path.join(args.model_path, os.pardir))
-        
     writerCSV(args, sameDist, diffDist, hitRatioList, valList, farList)
 
     update_loss_hist_lim(args, {'HitRatio' : [kList, hitRatioList]}, "HitRatio", "k", "hitRatio")
@@ -39,7 +39,6 @@ def main(args):
     torch.cuda.empty_cache()
 
 def update_loss_hist_lim(args, data, name="result", xlabel = "Epoch", ylabel = "Loss"):
-    from matplotlib import pyplot as plt
     legend_list = []
     plt.title(name)
     plt.xlabel(xlabel)
@@ -104,9 +103,19 @@ def eval_model(args, model, loader, device):
     pdiff = torch.sum(mask_neg == True)
 
     hitRatioList, kList = calculateHitRatio(dist, mask_pos, mask_neg)
+    calculateHitRatioFull(dist, mask_pos, mask_neg)
     sameDist, diffDist = calculateClusterDistClose(pos, neg, psame, pdiff)
     valList, farList = calculateClusterVAL_FAR(pos, neg, psame, pdiff)
     return hitRatioList, kList, sameDist, diffDist, valList, farList
+
+def data_class_distribution(args, data):
+    plt.hist(data[1], bins=10)
+    plt.xlabel('face count')
+    plt.ylabel('class')
+    plt.savefig("{}/{}.png".format(args.output_foloder, 'distribution'))
+    plt.show()
+    plt.clf()
+
 
 def create_dataloader(args, trans):
     dataset_test = datasets.ImageFolder(args.data_path, transform=trans)
@@ -117,6 +126,8 @@ def create_dataloader(args, trans):
         batch_size=args.batch_size,
         shuffle=False,
     )
+    targetCount = np.unique(dataset_test.targets, return_counts=True)
+    data_class_distribution(args, targetCount)
     return loader
 
 def loadModel(args):
@@ -219,6 +230,16 @@ def calculateHitRatio(dist, mask_pos, mask_neg, kMax = (5 + 1)):
         hitRatioList.append(float(hitRatio.cpu().detach().numpy()))
 
     return hitRatioList, kList
+
+def calculateHitRatioFull(dist, mask_pos, mask_neg):
+    k = 200
+    values, indices = torch.topk(dist, k, largest = False)
+    sameCount = torch.sum(mask_pos == True, 1)
+    hitCount = torch.sum(torch.gather(mask_pos, 1, indices) == True, 1)
+    hitRatio = np.nanmean(hitCount.cpu().detach().numpy() / sameCount.cpu().detach().numpy())
+    hitRatioFull = float(hitRatio)
+    print("hitRatioFull = ", hitRatioFull)
+    return 
 
 def writerCSV(args, sameDist, diffDist, hitRatioList, valList, farList):
     import csv
