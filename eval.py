@@ -74,8 +74,11 @@ def pass_epoch(model, loader, device):
             x = image_batch[0].to(device)
             y = image_batch[1]
 
-            y_pred, _ = model(x) #model架構不同要修改
-            # y_pred = model(x) #model架構不同要修改
+            if (args.pretrain != ""):
+                y_pred = model(x)
+            else:
+                y_pred = model.predict(x)
+
             y_pred = y_pred.cpu().detach().numpy()
             for j, data in enumerate(y_pred):
                 y_pred_list.append(data)
@@ -118,8 +121,16 @@ def create_dataloader(args, trans):
 
 def loadModel(args):
     with torch.no_grad():
-        model = torch.load(args.model_path).eval()
-    return model
+        from facenet_pytorch import InceptionResnetV1
+        if (args.pretrain == "casia-webface"): 
+            model = InceptionResnetV1(pretrained = 'casia-webface')
+        elif (args.pretrain == "vggface2"):
+            model = InceptionResnetV1(pretrained = 'vggface2')
+        elif (args.model_path != ""):
+            model = torch.load(args.model_path)
+        else:
+            print("no model load")
+    return model.eval()
 
 def pdist(v):
     dist = torch.norm(v[:, None] - v, dim=2, p=2)
@@ -230,7 +241,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model_path",
         type=str,
-        default="./model/model_baseline_new_data/checkpoint.pth.tar",
+        default="",
     )
     parser.add_argument(
         "--batch_size",
@@ -244,6 +255,11 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--output_foloder",
+        type=str,
+        default="",
+    )
+    parser.add_argument(
+        "--pretrain",
         type=str,
         default="",
     )

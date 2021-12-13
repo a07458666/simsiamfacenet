@@ -60,7 +60,7 @@ def create_model(args):
 
 
     if args.pretrain_model_path != "":
-        backbone = torch.load(args.pretrain_model_path)
+        backbone = torch.load(args.pretrain_model_path).encoder
         # checkpoint = torch.load(args.pretrain_model_path, map_location="cpu")
         # msg = backbone.load_state_dict(checkpoint["model"], strict=False)
         # backbone.load_state_dict(torch.load(args.pretrain_model_path)['model']).to(device)
@@ -186,7 +186,8 @@ def train(args, model, train_loader, val_loader, writer, device):
     scaler = GradScaler()
     stop = 0
     # min_val_loss = math.inf
-
+    torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
+    
     for epoch in range(args.epochs):
         print("\nEpoch {}/{}".format(epoch + 1, args.epochs))
         print("-" * 10)

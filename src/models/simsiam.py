@@ -61,3 +61,19 @@ class SimSiam(nn.Module):
         p2 = self.predictor(z2) # NxC
 
         return p1, p2, z1, z2
+
+    def predict(self, x):
+        """
+        Input:
+            x1: first views of images
+            x2: second views of images
+        Output:
+            p1, p2, z1, z2: predictors and targets of the network
+            See Sec. 3 of https://arxiv.org/abs/2011.10566 for detailed notations
+        """
+
+        # compute features for one view
+        y = self.encoder(x) # NxC
+        z = self.projector(y) # NxC
+
+        return z
