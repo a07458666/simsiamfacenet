@@ -6,7 +6,7 @@ imageSize = 224
 normalize = transforms.Normalize(
     mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
 )
-
+from facenet_pytorch import fixed_image_standardization
 
 class GaussianBlur(object):
     def __init__(self, sigma=[0.1, 2.0]):
@@ -19,7 +19,6 @@ class GaussianBlur(object):
 
 def get_aug_trnsform(imageSize = 224):
     transform = transforms.Compose([
-        np.float32,
         transforms.RandomResizedCrop(imageSize, scale=(0.2, 1.)),
         transforms.RandomApply([
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
@@ -27,6 +26,7 @@ def get_aug_trnsform(imageSize = 224):
         transforms.RandomGrayscale(p=0.2),
         transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
         transforms.RandomHorizontalFlip(),
+        np.float32,
         transforms.ToTensor(),
         fixed_image_standardization
     ])
@@ -35,7 +35,6 @@ def get_aug_trnsform(imageSize = 224):
 
 
 def get_eval_trnsform(img_size=imageSize):
-    from facenet_pytorch import fixed_image_standardization
 
     transform = transforms.Compose(
         [
