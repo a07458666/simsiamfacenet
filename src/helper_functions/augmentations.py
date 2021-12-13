@@ -1,7 +1,7 @@
 from PIL import ImageFilter
 from torchvision import transforms
 import random
-
+import numpy as np
 imageSize = 224
 normalize = transforms.Normalize(
     mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
@@ -19,6 +19,7 @@ class GaussianBlur(object):
 
 def get_aug_trnsform(imageSize = 224):
     transform = transforms.Compose([
+        np.float32,
         transforms.RandomResizedCrop(imageSize, scale=(0.2, 1.)),
         transforms.RandomApply([
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
@@ -27,18 +28,20 @@ def get_aug_trnsform(imageSize = 224):
         transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
-        normalize
+        fixed_image_standardization
     ])
     
     return transform
 
 
 def get_eval_trnsform(img_size=imageSize):
+    from facenet_pytorch import fixed_image_standardization
+
     transform = transforms.Compose(
         [
-            transforms.Resize((img_size, img_size)),
+            np.float32,
             transforms.ToTensor(),
-            normalize,
+            fixed_image_standardization,
         ]
     )
     return transform

@@ -80,7 +80,7 @@ def create_dataloader(args):
         get_eval_trnsform,
     )
 
-    trans_aug = get_aug_trnsform()
+    trans_aug = get_eval_trnsform()
     trans_eval = get_eval_trnsform()
     dataset_train = TripletImageLoader(args.data_path, transform=trans_aug)
     img_inds = np.arange(len(dataset_train))
