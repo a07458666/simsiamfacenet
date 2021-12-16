@@ -2,7 +2,6 @@ from PIL import ImageFilter
 from torchvision import transforms
 import random
 import numpy as np
-imageSize = 224
 normalize = transforms.Normalize(
     mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
 )
@@ -17,7 +16,7 @@ class GaussianBlur(object):
         x = x.filter(ImageFilter.GaussianBlur(radius=sigma))
         return x
 
-def get_aug_trnsform(imageSize = 80):
+def get_aug_trnsform(imageSize = 160):
     transform = transforms.Compose([
         transforms.RandomResizedCrop(imageSize, scale=(0.2, 1.)),
         transforms.RandomApply([
@@ -34,7 +33,7 @@ def get_aug_trnsform(imageSize = 80):
     return transform
 
 
-def get_eval_trnsform(img_size=imageSize):
+def get_eval_trnsform(img_size = 160):
 
     transform = transforms.Compose(
         [
