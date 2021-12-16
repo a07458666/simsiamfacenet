@@ -158,7 +158,7 @@ def train(args, model, train_loader, val_loader, writer, device):
     loss_fn = simsiam_vicreg_loss_func
     scaler = GradScaler()
     stop = 0
-    # min_train_loss = math.inf
+    min_train_loss = math.inf
 
     for epoch in range(args.epochs):
         print("\nEpoch {}/{}".format(epoch + 1, args.epochs))
@@ -202,13 +202,13 @@ def train(args, model, train_loader, val_loader, writer, device):
                                 "Var": train_loss_var_history,
                                 "Cov": train_loss_cov_history}, "Loss")
 
-        torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
+        # torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
         #early stopping
-        # if train_loss <= min_train_loss:
-        #     min_train_loss = train_loss
-        #     print("Best, save model, epoch = {}".format(epoch))
-        #     torch.save(model.encoder,"model/{}/checkpoint.pth.tar".format(args.output_foloder))
-        #     stop = 0
+        if train_loss <= min_train_loss:
+            min_train_loss = train_loss
+            print("Best, save model, epoch = {}".format(epoch))
+            torch.save(model.encoder,"model/{}/checkpoint.pth.tar".format(args.output_foloder))
+            # stop = 0
         # else:
         #     stop += 1
         #     if stop > 10:

@@ -142,9 +142,7 @@ def TripletSemiHardLoss(y_true, y_pred, device, margin=1.0):
 
     loss_mat = margin + pdist_matrix - semi_hard_negatives
 
-    mask_positives = adjacency.to(dtype=torch.float32) - torch.diag(
-        torch.ones(batch_size)
-    ).to(device)
+    mask_positives = adjacency.to(dtype=torch.float32) - torch.diag(torch.ones(batch_size)).to(device)
     num_positives = mask_positives.sum()
 
     triplet_loss = (

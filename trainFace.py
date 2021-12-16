@@ -185,7 +185,7 @@ def train(args, model, train_loader, val_loader, writer, device):
     crossEntropyLoss_fn = torch.nn.CrossEntropyLoss()
     scaler = GradScaler()
     stop = 0
-    # min_val_loss = math.inf
+    min_val_loss = math.inf
     torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
     
     for epoch in range(args.epochs):
@@ -251,11 +251,11 @@ def train(args, model, train_loader, val_loader, writer, device):
         update_loss_hist(args, {"train": train_acc_top1_history, "val": val_acc_top1_history}, "Top1")
         update_loss_hist(args, {"train": train_acc_top5_history, "val": val_acc_top5_history}, "Top5")
 
-        torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
-        # if val_loss <= min_val_loss:
-        #     min_val_loss = val_loss
-        #     print("Best, save model, epoch = {}".format(epoch))
-        #     torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
+        # torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
+        if val_loss <= min_val_loss:
+            min_val_loss = val_loss
+            print("Best, save model, epoch = {}".format(epoch))
+            torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
         #     stop = 0
         # else:
         #     stop += 1

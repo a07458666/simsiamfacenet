@@ -144,7 +144,7 @@ def train(args, model, train_loader, val_loader, writer, device):
     loss_fn = nn.CosineSimilarity(dim=1).to(device)
     scaler = GradScaler()
     stop = 0
-    # min_train_loss = math.inf
+    min_train_loss = math.inf
 
     for epoch in range(args.epochs):
         print("\nEpoch {}/{}".format(epoch + 1, args.epochs))
@@ -173,11 +173,11 @@ def train(args, model, train_loader, val_loader, writer, device):
         train_loss_history.append(train_loss)
         update_loss_hist(args, {"train": train_loss_history}, "Loss")
 
-        torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
-        # if train_loss <= min_train_loss:
-        #     min_train_loss = train_loss
-        #     print("Best, save model, epoch = {}".format(epoch))
-        #     torch.save(model.encoder,"model/{}/checkpoint.pth.tar".format(args.output_foloder))
+        # torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
+        if train_loss <= min_train_loss:
+            min_train_loss = train_loss
+            print("Best, save model, epoch = {}".format(epoch))
+            torch.save(model.encoder,"model/{}/checkpoint.pth.tar".format(args.output_foloder))
         #     stop = 0
         # else:
         #     stop += 1
