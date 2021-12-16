@@ -142,9 +142,7 @@ def TripletSemiHardLoss(y_true, y_pred, device, margin=1.0):
 
     loss_mat = margin + pdist_matrix - semi_hard_negatives
 
-    mask_positives = adjacency.to(dtype=torch.float32) - torch.diag(
-        torch.ones(batch_size)
-    ).to(device)
+    mask_positives = adjacency.to(dtype=torch.float32) - torch.diag(torch.ones(batch_size)).to(device)
     num_positives = mask_positives.sum()
 
     triplet_loss = (
@@ -154,6 +152,12 @@ def TripletSemiHardLoss(y_true, y_pred, device, margin=1.0):
         )
     ).sum() / num_positives
     triplet_loss = triplet_loss.to(dtype=embeddings.dtype)
+    if torch.isnan(triplet_loss):
+        print("num_positives", num_positives)
+        print("loss_mat", loss_mat)
+        print("margin", margin)
+        print("pdist_matrix", pdist_matrix)
+        print("semi_hard_negatives", semi_hard_negatives)
     return triplet_loss
 
 

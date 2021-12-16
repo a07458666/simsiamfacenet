@@ -123,9 +123,14 @@ def pass_epoch(args, model, loader, model_optimizer, tripletLoss_fn, crossEntrop
             model.eval()
         else:
             print("error model mode!")
-
+        
+        if torch.isnan(x).sum() > 0:
+            print("input data has nan")
+            raise NameError('input data has nan')
         projector_out,  predictor_out = model(x)
-
+        if torch.isnan(projector_out).sum() > 0:
+            print("projector_out  has nan")
+            raise NameError('projector_out  has nan')
         # compute loos
         loss_batch_triplet = tripletLoss_fn(projector_out, y)
 
@@ -134,12 +139,14 @@ def pass_epoch(args, model, loader, model_optimizer, tripletLoss_fn, crossEntrop
             print("loss_batch_triplet is nan")
             print(predictor_out)
             print(y)
+            raise NameError('loss_batch_triplet is nan')
         if torch.isinf(loss_batch_triplet):
             print("loss_batch_triplet is inf")
         if torch.isnan(loss_batch_cross):
             print("loss_batch_cross is nan")
         if torch.isinf(loss_batch_cross):
             print("loss_batch_cross is inf")
+            
         loss_batch = loss_batch_cross * args.alpha + loss_batch_triplet * (1. - args.alpha)
 
         loss_batch_acc_top = accuracy(predictor_out, y, topk=(1, 5))
@@ -185,7 +192,7 @@ def train(args, model, train_loader, val_loader, writer, device):
     crossEntropyLoss_fn = torch.nn.CrossEntropyLoss()
     scaler = GradScaler()
     stop = 0
-    # min_val_loss = math.inf
+    min_val_loss = math.inf
     torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
     
     for epoch in range(args.epochs):
@@ -251,17 +258,17 @@ def train(args, model, train_loader, val_loader, writer, device):
         update_loss_hist(args, {"train": train_acc_top1_history, "val": val_acc_top1_history}, "Top1")
         update_loss_hist(args, {"train": train_acc_top5_history, "val": val_acc_top5_history}, "Top5")
 
-        torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
-        # if val_loss <= min_val_loss:
-        #     min_val_loss = val_loss
-        #     print("Best, save model, epoch = {}".format(epoch))
-        #     torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
-        #     stop = 0
-        # else:
-        #     stop += 1
-        #     if stop > 10:
-        #         print("early stopping")
-        #         break
+#         torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
+        if val_loss <= min_val_loss:
+            min_val_loss = val_loss
+            print("Best, save model, epoch = {}".format(epoch))
+            torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
+#             stop = 0
+#         else:
+#             stop += 1
+#             if stop > 10:
+#                 print("early stopping")
+#                 break
     torch.cuda.empty_cache()
 
 
