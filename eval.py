@@ -19,6 +19,8 @@ from matplotlib import pyplot as plt
 
 def main(args):
     print("=====Eval=====")
+    if (args.gpu != ""):
+        os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     if (args.output_foloder == ""):
         args.output_foloder = os.path.abspath(os.path.join(args.model_path, os.pardir))
     device = checkGPU()
@@ -72,11 +74,14 @@ def pass_epoch(model, loader, device):
         for i_batch, image_batch in tqdm(enumerate(loader)):
             x = image_batch[0].to(device)
             y = image_batch[1]
-
+            
             if (args.pretrain != ""):
+                y_pred = model(x)
+            elif args.onlyEncoder:
                 y_pred = model(x)
             else:
                 y_pred = model.predict(x)
+                
 
             y_pred = y_pred.cpu().detach().numpy()
             for j, data in enumerate(y_pred):
@@ -283,6 +288,15 @@ if __name__ == "__main__":
         "--pretrain",
         type=str,
         default="",
+    )
+    parser.add_argument(
+        "--onlyEncoder",
+        action='store_true',
+    )
+    parser.add_argument(
+        "--gpu",
+        type=str,
+        default="0",
     )
     args = parser.parse_args()
     main(args)
