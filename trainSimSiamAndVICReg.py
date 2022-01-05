@@ -207,7 +207,7 @@ def train(args, model, train_loader, val_loader, writer, device):
         if train_loss <= min_train_loss:
             min_train_loss = train_loss
             print("Best, save model, epoch = {}".format(epoch))
-            torch.save(model.encoder,"model/{}/checkpoint.pth.tar".format(args.output_foloder))
+            torch.save(model,"model/{}/checkpoint.pth.tar".format(args.output_foloder))
             # stop = 0
         # else:
         #     stop += 1
@@ -225,7 +225,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=8,
+        default=256,
     )
     parser.add_argument(
         "--workers",
