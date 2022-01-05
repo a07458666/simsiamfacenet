@@ -16,6 +16,22 @@ class GaussianBlur(object):
         x = x.filter(ImageFilter.GaussianBlur(radius=sigma))
         return x
 
+def get_aug_trnsform_noCrop(imageSize = 160):
+    transform = transforms.Compose([
+        transforms.Resize((imageSize, imageSize)),
+        transforms.RandomApply([
+            transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)  # not strengthened
+        ], p=0.8),
+        transforms.RandomGrayscale(p=0.2),
+        transforms.RandomApply([GaussianBlur([.1, 2.])], p=0.5),
+        transforms.RandomHorizontalFlip(),
+        np.float32,
+        transforms.ToTensor(),
+        fixed_image_standardization
+    ])
+    
+    return transform
+    
 def get_aug_trnsform(imageSize = 160):
     transform = transforms.Compose([
         transforms.RandomResizedCrop(imageSize, scale=(0.2, 1.)),
@@ -37,9 +53,11 @@ def get_eval_trnsform(img_size = 160):
 
     transform = transforms.Compose(
         [
+            transforms.Resize((img_size, img_size)),
             np.float32,
             transforms.ToTensor(),
-            fixed_image_standardization,
+            fixed_image_standardization
+#             normalize,
         ]
     )
     return transform

@@ -64,7 +64,28 @@ class Facenet(nn.Module):
         p = self.predictor(z) # NxC
 
         return z, p
+    
+    def forwardSSL(self, x1, x2):
+        """
+        Input:
+            x1: first views of images
+            x2: second views of images
+        Output:
+            p1, p2, z1, z2: predictors and targets of the network
+            See Sec. 3 of https://arxiv.org/abs/2011.10566 for detailed notations
+        """
 
+        y1 = self.encoder(x1) # NxC
+        y2 = self.encoder(x2) # NxC
+
+        z1 = self.projector(y1) # NxC
+        z2 = self.projector(y2) # NxC
+
+        p1 = self.predictor(z1) # NxC
+        p2 = self.predictor(z2) # NxC
+
+        return p1, p2, z1, z2
+    
     def predict(self, x):
         """
         Input:
