@@ -142,9 +142,9 @@ def simsiam_vicreg_loss_func(
     z2: torch.Tensor,
     p1: torch.Tensor,
     p2: torch.Tensor,
-    sim_loss_weight: float = 25.0,
-    var_loss_weight: float = 25.0,
-    cov_loss_weight: float = 1.0,
+    sim_loss_weight: float = 1.0,
+    var_loss_weight: float = 1.0,
+    cov_loss_weight: float = 1e-2,
 ) -> torch.Tensor:
 
     sim_loss = (
