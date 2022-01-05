@@ -76,11 +76,15 @@ def create_model(args):
 
 def create_dataloader(args):
     from src.helper_functions.augmentations import (
+        get_aug_trnsform_noCrop,
         get_aug_trnsform,
         get_eval_trnsform,
     )
-
-    trans_aug = get_eval_trnsform()
+    
+    if args.noCrop:
+        trans_aug = get_aug_trnsform_noCrop()
+    else:
+        trans_aug = get_aug_trnsform()
     trans_eval = get_eval_trnsform()
     dataset_train = TripletImageLoader(args.data_path, transform=trans_aug)
     img_inds = np.arange(len(dataset_train))
@@ -108,12 +112,15 @@ def create_dataloader(args):
     print("val len", val_inds.__len__())
     return train_loader, val_loader
 
-def pass_epoch(args, model, loader, model_optimizer, tripletLoss_fn, crossEntropyLoss_fn, scaler, device, mode="Train"):
+def pass_epoch(args, model, loader, model_optimizer, scaler, device, mode="Train"):
     loss = 0
     loss_triplet = 0
     loss_cross = 0
     acc_top1 = 0
     acc_top5 = 0
+    
+    tripletLoss_fn = TripletLoss(device)
+    crossEntropyLoss_fn = torch.nn.CrossEntropyLoss()
 
     for i_batch, image_batch in tqdm(enumerate(loader)):
         x, y = torch.cat(image_batch[0], 0).to(device), torch.cat(image_batch[1], 0).to(device)
@@ -130,6 +137,8 @@ def pass_epoch(args, model, loader, model_optimizer, tripletLoss_fn, crossEntrop
         projector_out,  predictor_out = model(x)
         if torch.isnan(projector_out).sum() > 0:
             print("projector_out  has nan")
+            print("projector_out ", projector_out)
+            print("predictor_out", predictor_out)
             raise NameError('projector_out  has nan')
         # compute loos
         loss_batch_triplet = tripletLoss_fn(projector_out, y)
@@ -146,8 +155,15 @@ def pass_epoch(args, model, loader, model_optimizer, tripletLoss_fn, crossEntrop
             print("loss_batch_cross is nan")
         if torch.isinf(loss_batch_cross):
             print("loss_batch_cross is inf")
-            
-        loss_batch = loss_batch_cross * args.alpha + loss_batch_triplet * (1. - args.alpha)
+        
+        if args.loss_fn == "mix":
+            loss_batch = loss_batch_cross * args.alpha + loss_batch_triplet * (1. - args.alpha)
+        elif args.loss_fn == "triplet":
+            loss_batch = loss_batch_triplet
+        elif args.loss_fn == "cross_entropy":
+            loss_batch = loss_batch_cross
+        else:
+            print("args.loss_fn value no find")
 
         loss_batch_acc_top = accuracy(predictor_out, y, topk=(1, 5))
         
@@ -188,8 +204,6 @@ def train(args, model, train_loader, val_loader, writer, device):
         weight_decay=args.weight_decay,
     )
     model_scheduler = CosineAnnealingLR(model_optimizer, T_max=args.epochs)
-    tripletLoss_fn = TripletLoss(device)
-    crossEntropyLoss_fn = torch.nn.CrossEntropyLoss()
     scaler = GradScaler()
     stop = 0
     min_val_loss = math.inf
@@ -203,8 +217,6 @@ def train(args, model, train_loader, val_loader, writer, device):
             model,
             train_loader,
             model_optimizer,
-            tripletLoss_fn,
-            crossEntropyLoss_fn,
             scaler,
             device,
             "Train",
@@ -215,8 +227,6 @@ def train(args, model, train_loader, val_loader, writer, device):
                 model,
                 val_loader,
                 model_optimizer,
-                tripletLoss_fn,
-                crossEntropyLoss_fn,
                 scaler,
                 device,
                 "Eval",
@@ -368,6 +378,15 @@ if __name__ == "__main__":
         type=float,
         default=-1,
     )
+    parser.add_argument(
+        '--loss_fn',
+        type=str,
+        default='mix',
+        choices=['mix', 'triplet', 'cross_entropy'],
+        help='loss function[mix, triplet, cross_entropy]',
+    )
+    parser.add_argument('--noCrop', dest='noCrop', action='store_true')
+
     args = parser.parse_args()
 
     main(args)
