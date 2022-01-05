@@ -88,10 +88,11 @@ def create_dataloader(args):
     trans_eval = get_eval_trnsform()
     dataset_train = TripletImageLoader(args.data_path, transform=trans_aug)
     img_inds = np.arange(len(dataset_train))
-    np.random.shuffle(img_inds)
     train_inds = img_inds[:int(0.8 * len(img_inds))]
     val_inds = img_inds[int(0.8 * len(img_inds)):]
-
+    np.random.shuffle(train_inds)
+    np.random.shuffle(val_inds)
+    
     train_loader = DataLoader(
         dataset_train,
         num_workers=args.workers,
@@ -268,17 +269,10 @@ def train(args, model, train_loader, val_loader, writer, device):
         update_loss_hist(args, {"train": train_acc_top1_history, "val": val_acc_top1_history}, "Top1")
         update_loss_hist(args, {"train": train_acc_top5_history, "val": val_acc_top5_history}, "Top5")
 
-        # torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
         if val_loss <= min_val_loss:
             min_val_loss = val_loss
             print("Best, save model, epoch = {}".format(epoch))
             torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
-        #     stop = 0
-        # else:
-        #     stop += 1
-        #     if stop > 10:
-        #         print("early stopping")
-        #         break
     torch.cuda.empty_cache()
 
 
