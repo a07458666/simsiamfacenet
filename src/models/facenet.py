@@ -48,6 +48,11 @@ class Facenet(nn.Module):
                                         nn.BatchNorm1d(pred_dim),
                                         nn.ReLU(inplace=True), # hidden layer
                                         nn.Linear(pred_dim, dim)) # output layer
+        
+        self.predictor_SSL = nn.Sequential(nn.Linear(pred_dim, pred_dim, bias=False),
+                                        nn.BatchNorm1d(pred_dim),
+                                        nn.ReLU(inplace=True), # hidden layer
+                                        nn.Linear(pred_dim, pred_dim)) # output layer
 
     def forward(self, x):
         """
@@ -83,8 +88,11 @@ class Facenet(nn.Module):
 
         p1 = self.predictor(z1) # NxC
         p2 = self.predictor(z2) # NxC
+        
+        ps1 = self.predictor_SSL(z1)
+        ps2 = self.predictor_SSL(z2)
 
-        return p1, p2, z1, z2
+        return z1, z2, p1, p2, ps1, ps2
     
     def predict(self, x):
         """
@@ -98,6 +106,5 @@ class Facenet(nn.Module):
 
         # compute features for one view
         y = self.encoder(x) # NxC
-        z = self.projector(y) # NxC
 
-        return z
+        return y

@@ -43,9 +43,9 @@ def main(args):
     writer = create_writer(args)
     device = checkGPU()
     model = create_model(args).to(device)
-    train_loader, val_loader = create_dataloader(args)
+    loaders = create_dataloader(args)
     checkOutputDirectoryAndCreate(args.output_foloder)
-    train(args, model, train_loader, val_loader, writer, device)
+    train(args, model, loaders, writer, device)
 
 def create_model(args):
     from facenet_pytorch import InceptionResnetV1
@@ -88,10 +88,16 @@ def create_dataloader(args):
     trans_eval = get_eval_trnsform()
     dataset_train = TripletImageLoader(args.data_path, transform=trans_aug)
     img_inds = np.arange(len(dataset_train))
-    train_inds = img_inds[:int(0.8 * len(img_inds))]
-    val_inds = img_inds[int(0.8 * len(img_inds)):]
+    train_inds = img_inds[:int(0.9 * len(img_inds))]
+    val_never_inds = img_inds[int(0.9 * len(img_inds)):]
+    np.random.shuffle(train_inds)
+    np.random.shuffle(val_never_inds)
+    val_inds = train_inds[:len(val_never_inds)]
+    train_inds = train_inds[len(val_never_inds):]
     np.random.shuffle(train_inds)
     np.random.shuffle(val_inds)
+    
+    dataLoaders = {}
     
     train_loader = DataLoader(
         dataset_train,
@@ -107,11 +113,23 @@ def create_dataloader(args):
         # shuffle=True,
         sampler=SubsetRandomSampler(val_inds)
     )
+    val_loader_never = DataLoader(
+        dataset_train,
+        num_workers=args.workers,
+        batch_size=args.batch_size,
+        # shuffle=True,
+        sampler=SubsetRandomSampler(val_never_inds)
+    )
+    dataLoaders["train"] = train_loader
+    dataLoaders["val"] = val_loader
+    dataLoaders["val_never"] = val_loader_never
     print("====")
     print("class count: ", len(np.unique(dataset_train.targets, return_counts=True)[0]))
+    print("data len", img_inds.__len__())
     print("train len", train_inds.__len__())
     print("val len", val_inds.__len__())
-    return train_loader, val_loader
+    print("val never len", val_never_inds.__len__())
+    return dataLoaders
 
 def pass_epoch(args, model, loader, model_optimizer, scaler, device, mode="Train"):
     loss = 0
@@ -190,7 +208,7 @@ def pass_epoch(args, model, loader, model_optimizer, scaler, device, mode="Train
     acc_top5 /= i_batch + 1
     return loss, loss_triplet, loss_cross, acc_top1, acc_top5
 
-def train(args, model, train_loader, val_loader, writer, device):
+def train(args, model, loaders, writer, device):
     train_loss_history = []
     train_acc_top1_history = []
     train_acc_top5_history = []
@@ -208,6 +226,7 @@ def train(args, model, train_loader, val_loader, writer, device):
     scaler = GradScaler()
     stop = 0
     min_val_loss = math.inf
+    min_val_never_triplet_loss = math.inf
     torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
     
     for epoch in range(args.epochs):
@@ -216,7 +235,7 @@ def train(args, model, train_loader, val_loader, writer, device):
         train_loss, train_loss_triplet, train_loss_cross, train_acc_top1, train_acc_top5 = pass_epoch(
             args,
             model,
-            train_loader,
+            loaders["train"],
             model_optimizer,
             scaler,
             device,
@@ -226,7 +245,16 @@ def train(args, model, train_loader, val_loader, writer, device):
             val_loss, val_loss_triplet, val_loss_cross, val_acc_top1, val_acc_top5 = pass_epoch(
                 args,
                 model,
-                val_loader,
+                loaders["val"],
+                model_optimizer,
+                scaler,
+                device,
+                "Eval",
+            )
+            _, val_never_loss_triplet, _, _, _ = pass_epoch(
+                args,
+                model,
+                loaders["val_never"],
                 model_optimizer,
                 scaler,
                 device,
@@ -247,6 +275,8 @@ def train(args, model, train_loader, val_loader, writer, device):
             logMsg["top1/val"] = val_acc_top1
             logMsg["top5/train"] = train_acc_top5
             logMsg["top5/val"] = val_acc_top5
+            logMsg["triplet/val_never"] = val_never_loss_triplet
+            
             wandb.log(logMsg)
             wandb.watch(model,log = "all", log_graph=True)
 
@@ -268,11 +298,15 @@ def train(args, model, train_loader, val_loader, writer, device):
         update_loss_hist(args, {"train": train_loss_history, "val": val_loss_history}, "Loss")
         update_loss_hist(args, {"train": train_acc_top1_history, "val": val_acc_top1_history}, "Top1")
         update_loss_hist(args, {"train": train_acc_top5_history, "val": val_acc_top5_history}, "Top5")
-
+        
         if val_loss <= min_val_loss:
             min_val_loss = val_loss
             print("Best, save model, epoch = {}".format(epoch))
             torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
+        if val_never_loss_triplet <= min_val_never_triplet_loss:
+            min_val_never_triplet_loss = val_never_loss_triplet
+            print("Best, save model, epoch = {}".format(epoch))
+            torch.save(model, "model/{}/checkpoint_never.pth.tar".format(args.output_foloder))
     torch.cuda.empty_cache()
 
 
