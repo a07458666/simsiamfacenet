@@ -24,7 +24,9 @@ def main(args):
     if (args.output_foloder == ""):
         args.output_foloder = os.path.abspath(os.path.join(args.model_path, os.pardir))
     device = checkGPU()
-    model = loadModel(args).to(device)
+    if (args.gpu == -1):
+        device = torch.device("cpu")
+    model = loadModel(args, device).to(device)
     trans = get_eval_trnsform()
     loader = create_dataloader(args, trans)
     hitRatioList, kList, sameDist, diffDist, valList, farList = eval_model(args, model, loader, device)
@@ -135,7 +137,7 @@ def create_dataloader(args, trans):
     data_class_distribution(args, targetCount)
     return loader
 
-def loadModel(args):
+def loadModel(args, device):
     with torch.no_grad():
         from facenet_pytorch import InceptionResnetV1
         if (args.pretrain == "casia-webface"): 
@@ -143,7 +145,7 @@ def loadModel(args):
         elif (args.pretrain == "vggface2"):
             model = InceptionResnetV1(pretrained = 'vggface2')
         elif (args.model_path != ""):
-            model = torch.load(args.model_path)
+            model = torch.load(args.model_path, map_location=device)
         else:
             print("no model load")
     return model.eval()
