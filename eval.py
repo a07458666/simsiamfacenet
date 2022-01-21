@@ -261,6 +261,46 @@ def writerCSV(args, sameDist, diffDist, hitRatioList, valList, farList):
         writer.writerow(['sameDist', 'diffDist', 'S/D', 'hitRatio', 'VAL', 'FAR'])
         writer.writerow([str(sameDist), str(diffDist), str(sameDist/diffDist), hitRatioList, valList, farList])
 
+# for training
+def eval_pass_epoch(model, loader, device):
+    y_pred_list = []
+    y_list = []
+    with torch.no_grad():
+        for i_batch, image_batch in tqdm(enumerate(loader)):
+            x = torch.cat(image_batch[0], 0).to(device)
+            y = torch.cat(image_batch[2], 0).to(device)
+
+            y_pred = model.predict(x)    
+            
+            y_pred = y_pred.cpu().detach().numpy()
+            for j, data in enumerate(y_pred):
+                y_pred_list.append(data)
+                y_list.append(int(y[j]))
+    return torch.Tensor(y_pred_list).to(device), torch.Tensor(y_list).to(device)
+
+# for training
+def evalHitRatio(model, loader, device):
+    y_pre, y = eval_pass_epoch(model, loader, device)
+    
+    # dist = pdist(y_pre)
+    dist = pairwise_distance_torch(y_pre, device)
+    dist[dist == 0] = float('nan')
+
+    mask_pos, mask_neg = makemask(y)   
+
+    pos = dist * mask_pos.float().to(device)
+    pos[pos == 0] = float('nan')
+    neg = dist * mask_neg.float().to(device)
+    neg[neg == 0] = float('nan')
+    psame = torch.sum(mask_pos == True)
+    pdiff = torch.sum(mask_neg == True)
+
+    hitRatioList, kList = calculateHitRatio(dist, mask_pos, mask_neg)
+    del y_pre
+    del y
+    return hitRatioList
+    
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="eval")
     parser.add_argument(

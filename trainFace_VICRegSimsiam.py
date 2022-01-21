@@ -19,7 +19,7 @@ from torch.utils.tensorboard import SummaryWriter
 from src.helper_functions.helper import set_parameter_requires_grad, checkGPU
 from src.helper_functions.helper import checkOutputDirectoryAndCreate,update_loss_hist, accuracy
 from src.helper_functions.tensorboardWriter import create_writer
-
+from eval import evalHitRatio
 try:
     import wandb
 except ImportError:
@@ -39,6 +39,7 @@ def main(args):
         wandb.define_metric("cross", summary="min")
         wandb.define_metric("ssl", summary="min")
         wandb.define_metric("acc", summary="max")
+        wandb.define_metric("hitRatio", summary="max")
 
     writer = create_writer(args)
     device = checkGPU()
@@ -76,20 +77,23 @@ def create_model(args):
 
 def create_dataloader(args):
     from src.helper_functions.augmentations import (
+        get_aug_trnsform_RandomCrop,
         get_aug_trnsform_noCrop,
         get_aug_trnsform,
         get_eval_trnsform,
     )
     
-    if args.noCrop:
+    if args.aug == "noCrop":
         trans_aug = get_aug_trnsform_noCrop()
+    elif args.aug == "RandomCrop":
+        trans_aug = get_aug_trnsform_RandomCrop()
     else:
         trans_aug = get_aug_trnsform()
     trans_eval = get_eval_trnsform()
     dataset_train = TripletSSLImageLoader(args.data_path, transform=trans_aug)
     img_inds = np.arange(len(dataset_train))
-    train_inds = img_inds[:int(0.9 * len(img_inds))]
-    val_never_inds = img_inds[int(0.9 * len(img_inds)):]
+    train_inds = img_inds[:int(args.dataRatio * len(img_inds))]
+    val_never_inds = img_inds[int(args.dataRatio * len(img_inds)):]
     np.random.shuffle(train_inds)
     np.random.shuffle(val_never_inds)
     val_inds = train_inds[:len(val_never_inds)]
@@ -206,8 +210,8 @@ def train(args, model, loaders, writer, device):
     stop = 0
     min_val_loss = math.inf
     min_val_never_loss = math.inf
+    max_hitRatioList = 0
     torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
-    
     for epoch in range(args.epochs):
         print("\nEpoch {}/{}".format(epoch + 1, args.epochs))
         print("-" * 10)
@@ -239,6 +243,7 @@ def train(args, model, loaders, writer, device):
                 device,
                 "Eval",
             )
+            hitRatioList = evalHitRatio(model, loaders["val_never"], device)
         model_scheduler.step()
 
         if (wandb != None):
@@ -254,7 +259,9 @@ def train(args, model, loaders, writer, device):
             logMsg["top1/val"] = val_acc_top1
             logMsg["top5/train"] = train_acc_top5
             logMsg["top5/val"] = val_acc_top5
-            logMsg["ssl_never/val"] = val_never_loss_ssl
+            logMsg["ssl/val_unseen"] = val_never_loss_ssl
+            logMsg["hitRatio/k=1"] = hitRatioList[0]
+            logMsg["hitRatio/k=5"] = hitRatioList[4]
             wandb.log(logMsg)
             wandb.watch(model,log = "all", log_graph=True)
 
@@ -285,6 +292,10 @@ def train(args, model, loaders, writer, device):
             min_val_never_loss = val_never_loss_ssl
             print("Best, save never model, epoch = {}".format(epoch))
             torch.save(model, "model/{}/checkpoint_never.pth.tar".format(args.output_foloder))
+        if hitRatioList[0] >= max_hitRatioList:
+            max_hitRatioList = hitRatioList[0]
+            print("Best, save hitRatio model, epoch = {}".format(epoch))
+            torch.save(model, "model/{}/checkpoint_hitRatio.pth.tar".format(args.output_foloder))
     torch.cuda.empty_cache()
 
 
@@ -369,10 +380,16 @@ if __name__ == "__main__":
         type=float,
         default=0.5,
     )
+#     parser.add_argument(
+#         "--pretrain",
+#         type=str,
+#         default="",
+#     )
     parser.add_argument(
-        "--pretrain",
+        '--pretrain',
         type=str,
         default="",
+        choices=["", "casia-webface", 'vggface2'],
     )
     parser.add_argument(
         "--gpu",
@@ -384,8 +401,17 @@ if __name__ == "__main__":
         type=float,
         default=-1,
     )
-    parser.add_argument('--noCrop', dest='noCrop', action='store_true')
-
+    parser.add_argument(
+        '--aug',
+        type=str,
+        default="",
+        choices=["", "noCrop", 'RandomCrop'],
+    )
+    parser.add_argument(
+        "--dataRatio",
+        type=float,
+        default=0.9,
+    )
     args = parser.parse_args()
 
     main(args)
