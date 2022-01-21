@@ -22,7 +22,14 @@ def is_image_file(filename):
     return any(filename.endswith(extension) for extension in IMG_EXTENSIONS)
 
 def find_classes(dir):
-    classes = os.listdir(dir)
+    classes = []
+    for c in os.listdir(dir):
+        d = os.path.join(dir, c)
+        if not os.path.isdir(d):
+            continue
+        if(c == ".ipynb_checkpoints"):
+            continue
+        classes.append(c)
     classes.sort()
     class_to_idx = {classes[i]: i for i in range(len(classes))}
     idx_to_class = {}
@@ -38,6 +45,8 @@ def make_dataset(dir, class_to_idx):
         d = os.path.join(dir, target)
         if not os.path.isdir(d):
             continue
+        if(target == ".ipynb_checkpoints"):
+            continue
         idx = class_to_idx[target]
         label_to_indices[str(idx)] = []
         for filename in os.listdir(d):
@@ -47,14 +56,13 @@ def make_dataset(dir, class_to_idx):
                 item = (path, idx)
                 images.append(item)
                 targets.append(idx)
-
     return images, targets, label_to_indices
 
 class FaceImages(Dataset):
     
     def __init__(self, root, transform, specific = '**'):
         self.root = root
-        self.img_path_list = glob.glob(os.path.join(root, specific + '/*.jpg'))
+        self.img_path_list = glob.glob(os.path.join(root, specific + '/*.jpg')) + glob.glob(os.path.join(root, specific + '/*.png'))
         self.transform = transform
         classes, class_to_idx, idx_to_class = find_classes(root)
         self.class_to_idx = class_to_idx
@@ -75,7 +83,7 @@ class FaceImages(Dataset):
         return Image.open(img_path, mode='r').convert('RGB')
 
 class TripletImageLoader(Dataset):
-    def __init__(self, root, choic_count = 2, transform=None, target_transform=None):
+    def __init__(self, root, choic_count = 1, transform=None, target_transform=None):
         classes, class_to_idx, idx_to_class = find_classes(root)
         imgs, targets, label_to_indices = make_dataset(root, class_to_idx)
         self.targets = targets
@@ -94,6 +102,7 @@ class TripletImageLoader(Dataset):
         targets = []
         path, target = self.imgs[index]
         random_choice = np.random.choice(list(self.label_to_indices[str(target)]), size=self.choic_count)
+        random_choice.append(index)
         for choice_index in random_choice:
             path, target = self.imgs[choice_index]
             img = Image.open(os.path.join(self.root, path)).convert('RGB')
@@ -110,7 +119,7 @@ class TripletImageLoader(Dataset):
         return len(self.imgs)
     
 class TripletSSLImageLoader(Dataset):
-    def __init__(self, root, choic_count = 2, transform=None, target_transform=None):
+    def __init__(self, root, choic_count = 1, transform=None, target_transform=None):
         classes, class_to_idx, idx_to_class = find_classes(root)
         imgs, targets, label_to_indices = make_dataset(root, class_to_idx)
         self.targets = targets
@@ -129,19 +138,28 @@ class TripletSSLImageLoader(Dataset):
         imgs_2 = []
         targets = []
         path, target = self.imgs[index]
-        random_choice = np.random.choice(list(self.label_to_indices[str(target)]), size=self.choic_count)
-        for choice_index in random_choice:
-            path, target = self.imgs[choice_index]
-            img = Image.open(os.path.join(self.root, path)).convert('RGB')
-            if self.transform is not None:
-                img_1 = self.transform(img)
-                img_2 = self.transform(img)
-            if self.target_transform is not None:
-                target = self.target_transform(target)
-            imgs_1.append(img_1)
-            imgs_2.append(img_2)
-            targets.append(target)
-
+#         random_choice = np.random.choice(list(self.label_to_indices[str(target)]), size=self.choic_count)
+#         random_choice.appned(index)
+#         for choice_index in random_choice:
+#             path, target = self.imgs[choice_index]
+#             img = Image.open(os.path.join(self.root, path)).convert('RGB')
+#             if self.transform is not None:
+#                 img_1 = self.transform(img)
+#                 img_2 = self.transform(img)
+#             if self.target_transform is not None:
+#                 target = self.target_transform(target)
+#             imgs_1.append(img_1)
+#             imgs_2.append(img_2)
+#             targets.append(target)
+        img = Image.open(os.path.join(self.root, path)).convert('RGB')
+        if self.transform is not None:
+            img_1 = self.transform(img)
+            img_2 = self.transform(img)
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+        imgs_1.append(img_1)
+        imgs_2.append(img_2)
+        targets.append(target)
         return imgs_1, imgs_2, targets
 
     def __len__(self):
