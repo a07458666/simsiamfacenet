@@ -19,7 +19,7 @@ from torch.utils.tensorboard import SummaryWriter
 from src.helper_functions.helper import set_parameter_requires_grad, checkGPU
 from src.helper_functions.helper import checkOutputDirectoryAndCreate,update_loss_hist, accuracy
 from src.helper_functions.tensorboardWriter import create_writer
-from eval import evalHitRatio
+from eval import evalHitRatio, eval_pass_epoch
 try:
     import wandb
 except ImportError:
@@ -243,7 +243,8 @@ def train(args, model, loaders, writer, device):
                 device,
                 "Eval",
             )
-            hitRatioList = evalHitRatio(model, loaders["val_never"], device)
+            y_pre, y = eval_pass_epoch(model, loaders["val_never"], device)
+            hitRatioList = evalHitRatio(y_pre, y, device)
         model_scheduler.step()
 
         if (wandb != None):
