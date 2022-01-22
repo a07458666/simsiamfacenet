@@ -19,6 +19,7 @@ from torch.utils.tensorboard import SummaryWriter
 from src.helper_functions.helper import set_parameter_requires_grad, checkGPU
 from src.helper_functions.helper import checkOutputDirectoryAndCreate,update_loss_hist, accuracy
 from src.helper_functions.tensorboardWriter import create_writer
+from eval import evalHitRatio, eval_pass_epoch
 
 try:
     import wandb
@@ -227,6 +228,7 @@ def train(args, model, loaders, writer, device):
     stop = 0
     min_val_loss = math.inf
     min_val_never_triplet_loss = math.inf
+    max_hitRatioList = 0
     torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
     
     for epoch in range(args.epochs):
@@ -260,6 +262,8 @@ def train(args, model, loaders, writer, device):
                 device,
                 "Eval",
             )
+            y_pre, y = eval_pass_epoch(model, loaders["val_never"], device)
+            hitRatioList = evalHitRatio(y_pre, y, device)
         model_scheduler.step()
 
         if (wandb != None):
@@ -276,6 +280,8 @@ def train(args, model, loaders, writer, device):
             logMsg["top5/train"] = train_acc_top5
             logMsg["top5/val"] = val_acc_top5
             logMsg["triplet/val_never"] = val_never_loss_triplet
+            logMsg["hitRatio/k=1"] = hitRatioList[0]
+            logMsg["hitRatio/k=5"] = hitRatioList[4]
             
             wandb.log(logMsg)
             wandb.watch(model,log = "all", log_graph=True)
@@ -307,6 +313,10 @@ def train(args, model, loaders, writer, device):
             min_val_never_triplet_loss = val_never_loss_triplet
             print("Best, save model, epoch = {}".format(epoch))
             torch.save(model, "model/{}/checkpoint_never.pth.tar".format(args.output_foloder))
+        if hitRatioList[0] >= max_hitRatioList:
+            max_hitRatioList = hitRatioList[0]
+            print("Best, save hitRatio model, epoch = {}".format(epoch))
+            torch.save(model, "model/{}/checkpoint_hitRatio.pth.tar".format(args.output_foloder))
     torch.cuda.empty_cache()
 
 
@@ -414,7 +424,11 @@ if __name__ == "__main__":
         help='loss function[mix, triplet, cross_entropy]',
     )
     parser.add_argument('--noCrop', dest='noCrop', action='store_true')
-
+    parser.add_argument(
+        "--dataRatio",
+        type=float,
+        default=0.9,
+    )
     args = parser.parse_args()
 
     main(args)
