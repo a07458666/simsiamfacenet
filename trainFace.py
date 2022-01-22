@@ -19,7 +19,7 @@ from torch.utils.tensorboard import SummaryWriter
 from src.helper_functions.helper import set_parameter_requires_grad, checkGPU
 from src.helper_functions.helper import checkOutputDirectoryAndCreate,update_loss_hist, accuracy
 from src.helper_functions.tensorboardWriter import create_writer
-from eval import evalHitRatio, eval_pass_epoch
+from eval import evalHitRatio
 
 try:
     import wandb
@@ -89,8 +89,8 @@ def create_dataloader(args):
     trans_eval = get_eval_trnsform()
     dataset_train = TripletImageLoader(args.data_path, transform=trans_aug)
     img_inds = np.arange(len(dataset_train))
-    train_inds = img_inds[:int(0.9 * len(img_inds))]
-    val_never_inds = img_inds[int(0.9 * len(img_inds)):]
+    train_inds = img_inds[:int(args.dataRatio * len(img_inds))]
+    val_never_inds = img_inds[int(args.dataRatio * len(img_inds)):]
     np.random.shuffle(train_inds)
     np.random.shuffle(val_never_inds)
     val_inds = train_inds[:len(val_never_inds)]
@@ -262,7 +262,7 @@ def train(args, model, loaders, writer, device):
                 device,
                 "Eval",
             )
-            y_pre, y = eval_pass_epoch(model, loaders["val_never"], device)
+            y_pre, y = eval_pass_epoch_facenet(model, loaders["val_never"], device)
             hitRatioList = evalHitRatio(y_pre, y, device)
         model_scheduler.step()
 
@@ -318,6 +318,24 @@ def train(args, model, loaders, writer, device):
             print("Best, save hitRatio model, epoch = {}".format(epoch))
             torch.save(model, "model/{}/checkpoint_hitRatio.pth.tar".format(args.output_foloder))
     torch.cuda.empty_cache()
+
+# for training
+def eval_pass_epoch_facenet(model, loader, device):
+    y_pred_list = []
+    y_list = []
+    with torch.no_grad():
+        for i_batch, image_batch in tqdm(enumerate(loader)):
+            x = torch.cat(image_batch[0], 0).to(device)
+            y = torch.cat(image_batch[1], 0).to(device)
+
+            projector_out,  predictor_out = model(x)    
+            
+            projector_out = projector_out.cpu().detach().numpy()
+            for j, data in enumerate(projector_out):
+                y_pred_list.append(data)
+                y_list.append(int(y[j]))
+    return torch.Tensor(y_pred_list).to(device), torch.Tensor(y_list).to(device)
+
 
 
 if __name__ == "__main__":
