@@ -279,8 +279,8 @@ def eval_pass_epoch(model, loader, device):
     return torch.Tensor(y_pred_list).to(device), torch.Tensor(y_list).to(device)
 
 # for training
-def evalHitRatio(model, loader, device):
-    y_pre, y = eval_pass_epoch(model, loader, device)
+def evalHitRatio(y_pre, y, device):
+#     y_pre, y = eval_pass_epoch(model, loader, device)
     
     # dist = pdist(y_pre)
     dist = pairwise_distance_torch(y_pre, device)
