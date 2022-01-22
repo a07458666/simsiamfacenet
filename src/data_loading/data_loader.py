@@ -102,7 +102,7 @@ class TripletImageLoader(Dataset):
         targets = []
         path, target = self.imgs[index]
         random_choice = np.random.choice(list(self.label_to_indices[str(target)]), size=self.choic_count)
-        random_choice.append(index)
+        random_choice = np.append(random_choice, index)
         for choice_index in random_choice:
             path, target = self.imgs[choice_index]
             img = Image.open(os.path.join(self.root, path)).convert('RGB')
