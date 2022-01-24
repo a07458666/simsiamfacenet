@@ -57,7 +57,7 @@ def create_model(args):
     elif (args.pretrain == "vggface2"):
         backbone = InceptionResnetV1(pretrained = 'vggface2')
     else:
-        backbone = InceptionResnetV1()
+        backbone = InceptionResnetV1(classify=True, num_classes = 512)
 
 
     if args.pretrain_model_path != "":
