@@ -148,6 +148,8 @@ def loadModel(args, device):
             model = torch.load(args.model_path, map_location=device)
         else:
             print("no model load")
+    if args.onlyEncoder:
+        model.classify = False
     return model.eval()
 
 def pdist(v):
