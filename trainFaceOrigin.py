@@ -8,7 +8,7 @@ from torch import nn
 from tqdm import tqdm
 from torch import optim
 from torch.utils.data import DataLoader, SubsetRandomSampler
-from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.optim.lr_scheduler import CosineAnnealingLR, MultiStepLR
 from matplotlib import pyplot as plt
 from torch.cuda.amp import GradScaler, autocast
 from torch.nn.utils import clip_grad_norm_
@@ -63,6 +63,7 @@ def create_model(args):
 
     if args.pretrain_model_path != "":
         backbone = torch.load(args.pretrain_model_path).encoder
+        backbone.logits = nn.Linear(512, args.dim)
         # checkpoint = torch.load(args.pretrain_model_path, map_location="cpu")
         # msg = backbone.load_state_dict(checkpoint["model"], strict=False)
         # backbone.load_state_dict(torch.load(args.pretrain_model_path)['model']).to(device)
@@ -81,10 +82,13 @@ def create_dataloader(args):
         get_aug_trnsform_noCrop,
         get_aug_trnsform,
         get_eval_trnsform,
+        get_aug_trnsform_RandomCrop,
     )
     
-    if args.noCrop:
+    if args.aug == "noCrop":
         trans_aug = get_aug_trnsform_noCrop()
+    elif args.aug == "RandomCrop":
+        trans_aug = get_aug_trnsform_RandomCrop()
     else:
         trans_aug = get_aug_trnsform()
     trans_eval = get_eval_trnsform()
@@ -191,14 +195,21 @@ def train(args, model, loaders, writer, device):
     val_loss_history = []
     val_acc_top1_history = []
     val_acc_top5_history = []
-
-    model_optimizer = optim.SGD(
-        model.parameters(),
-        lr=args.lr * (args.batch_size / 256),
-        momentum=args.momentum,
-        weight_decay=args.weight_decay,
-    )
-    model_scheduler = CosineAnnealingLR(model_optimizer, T_max=args.epochs)
+    
+    if (args.optimizer == "SGD"):
+        model_optimizer = optim.SGD(
+            model.parameters(),
+            lr=args.lr * (args.batch_size / 256),
+            momentum=args.momentum,
+            weight_decay=args.weight_decay,
+        )
+    elif (args.optimizer == "Adam"):
+        model_optimizer = optim.Adam(model.parameters(), lr=args.lr * (args.batch_size / 256))
+        
+    if (args.lr_scheduler == "CosineAnnealingLR"):
+        model_scheduler = CosineAnnealingLR(model_optimizer, T_max=args.epochs)
+    elif (args.lr_scheduler == "MultiStepLR"):
+        model_scheduler = MultiStepLR(model_optimizer, milestones=[int(args.epochs * 0.6),int(args.epochs * 0.8)], gamma=0.1)
     scaler = GradScaler()
     stop = 0
     min_val_loss = math.inf
@@ -419,8 +430,24 @@ if __name__ == "__main__":
         type=float,
         default=0.9,
     )
-    parser.add_argument('--noCrop', dest='noCrop', action='store_true')
-
+    parser.add_argument(
+        '--aug',
+        type=str,
+        default="",
+        choices=["", "noCrop", 'RandomCrop'],
+    )
+    parser.add_argument(
+        '--lr_scheduler',
+        type=str,
+        default="CosineAnnealingLR",
+        choices=["CosineAnnealingLR", 'MultiStepLR'],
+    )
+    parser.add_argument(
+        '--optimizer',
+        type=str,
+        default="SGD",
+        choices=["SGD", 'Adam'],
+    )   
     args = parser.parse_args()
 
     main(args)
