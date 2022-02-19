@@ -57,7 +57,7 @@ def create_model(args):
     elif (args.pretrain == "vggface2"):
         backbone = InceptionResnetV1(pretrained = 'vggface2')
     else:
-        backbone = InceptionResnetV1()
+        backbone = InceptionResnetV1(classify=True, num_classes = 512)
 
 
     if args.pretrain_model_path != "":
@@ -346,7 +346,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=32,
+        default=256,
     )
     parser.add_argument(
         "--workers",
