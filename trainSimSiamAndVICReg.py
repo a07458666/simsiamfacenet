@@ -32,6 +32,7 @@ def main(args):
     if (args.gpu != ""):
         os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     if (wandb != None):
+        wandb.save('""./src/*/*.py")
         wandb.init(project="FaceSSL", entity="andy-su", name=args.output_foloder)
         wandb.config.update(args)
         wandb.define_metric("loss", summary="min")
