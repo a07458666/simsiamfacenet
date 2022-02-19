@@ -34,12 +34,14 @@ def main(args):
         os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     if (wandb != None):
         wandb.init(project="FaceSSL", entity="andy-su", name=args.output_foloder)
+        wandb.save("./src/*/*.py")
         wandb.config.update(args)
         wandb.define_metric("loss", summary="min")
         wandb.define_metric("cross", summary="min")
         wandb.define_metric("ssl", summary="min")
         wandb.define_metric("acc", summary="max")
         wandb.define_metric("hitRatio", summary="max")
+        
 
     writer = create_writer(args)
     device = checkGPU()
@@ -57,7 +59,7 @@ def create_model(args):
     elif (args.pretrain == "vggface2"):
         backbone = InceptionResnetV1(pretrained = 'vggface2')
     else:
-        backbone = InceptionResnetV1(classify=True, num_classes = 512)
+        backbone = InceptionResnetV1(classify=True, num_classes = args.prev_dim)
 
 
     if args.pretrain_model_path != "":
@@ -69,7 +71,7 @@ def create_model(args):
 
     set_parameter_requires_grad(backbone, args.fix_backbone)
 
-    model = Facenet(backbone, dim = args.dim, prev_dim = 512, pred_dim = 512)
+    model = Facenet(backbone, dim = args.dim, prev_dim = args.prev_dim, pred_dim = args.pred_dim)
     if args.resume_model_path != "":
         model = torch.load(args.resume_model_path)
     return model
@@ -360,6 +362,16 @@ if __name__ == "__main__":
         "--dim",
         type=int,
         default=120,
+    )
+    parser.add_argument(
+        "--prev_dim",
+        type=int,
+        default=512,
+    )
+    parser.add_argument(
+        "--pred_dim",
+        type=int,
+        default=512,
     )
     parser.add_argument(
         "--sim_weight",
