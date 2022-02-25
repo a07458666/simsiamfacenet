@@ -96,14 +96,13 @@ class BaseLoss(nn.modules.Module):
         z = z.detach()  # stop gradient
         return -(F.cosine_similarity(p, z,).mean())
 
-    @staticmethod
-    def simsiam_vicreg_loss_func(z1: torch.Tensor, z2: torch.Tensor, p1: torch.Tensor, p2: torch.Tensor, sim_loss_weight: float = 1.0, var_loss_weight: float = 1.0, cov_loss_weight: float = 1e-2) -> torch.Tensor:
+    def simsiam_vicreg_loss_func(self, z1: torch.Tensor, z2: torch.Tensor, p1: torch.Tensor, p2: torch.Tensor, sim_loss_weight: float = 1.0, var_loss_weight: float = 1.0, cov_loss_weight: float = 1e-2) -> torch.Tensor:
         sim_loss = (
             self.cosine_similarity_loss(
                 p1,
                 z2.detach(),
             )
-            + cosine_similarity_loss(
+            + self.cosine_similarity_loss(
                 p2,
                 z1.detach(),
             )
