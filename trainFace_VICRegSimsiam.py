@@ -20,12 +20,13 @@ from src.helper_functions.helper import set_parameter_requires_grad, checkGPU
 from src.helper_functions.helper import checkOutputDirectoryAndCreate,update_loss_hist, accuracy
 from src.helper_functions.tensorboardWriter import create_writer
 from eval import evalHitRatio, eval_pass_epoch
+from src import losses
+NUM_LOSSES = 2
 try:
     import wandb
 except ImportError:
     wandb = None
     logger.info("Install Weights & Biases for experiment logging via 'pip install wandb' (recommended)")
-
 
 def main(args):
     print("=====Facenet=====")
@@ -68,7 +69,6 @@ def create_model(args):
         # msg = backbone.load_state_dict(checkpoint["model"], strict=False)
         # backbone.load_state_dict(torch.load(args.pretrain_model_path)['model']).to(device)
     
-
     set_parameter_requires_grad(backbone, args.fix_backbone)
 
     model = Facenet(backbone, dim = args.dim, prev_dim = args.prev_dim, pred_dim = args.pred_dim)
@@ -137,9 +137,12 @@ def create_dataloader(args):
     print("val never len", val_never_inds.__len__())
     return dataLoaders
 
-def pass_epoch(args, model, loader, model_optimizer, scaler, device, mode="Train"):
+def pass_epoch(args, model, loader, model_optimizer, scaler, device, coVWeightingLoss, mode="Train"):
     loss = 0
     loss_ssl = 0
+    loss_sim = 0
+    loss_var = 0
+    loss_cov = 0
     loss_cross = 0
     acc_top1 = 0
     acc_top5 = 0
@@ -164,10 +167,15 @@ def pass_epoch(args, model, loader, model_optimizer, scaler, device, mode="Train
         z1, z2, p1, p2, ps1, ps2 = model.forwardSSL(x1, x2)
 
         # compute loos
-        loss_batch_cross = crossEntropyLoss_fn(p1, y)
-        loss_batch_ssl, _, _, _ = simsiam_vicreg_loss_func(z1, z2, ps1, ps2)
-        
-        loss_batch = loss_batch_cross * args.alpha + loss_batch_ssl * (1. - args.alpha)
+        if args.UseCoVWeightingLoss:
+            pre = [z1, z2, p1, p2, ps1, ps2]
+            loss_batch_cross = crossEntropyLoss_fn(p1, y) #for show
+            loss_batch_ssl, loss_batch_sim, loss_batch_var, loss_batch_cov = simsiam_vicreg_loss_func(z1, z2, ps1, ps2)  #for show
+            loss_batch = coVWeightingLoss.forward(pre, y)
+        else:
+            loss_batch_cross = crossEntropyLoss_fn(p1, y)
+            loss_batch_ssl, loss_batch_sim, loss_batch_var, loss_batch_cov = simsiam_vicreg_loss_func(z1, z2, ps1, ps2)
+            loss_batch = loss_batch_cross * args.alpha + loss_batch_ssl * (1. - args.alpha)
 
         loss_batch_acc_top = accuracy(p1, y, topk=(1, 5))
         
@@ -181,17 +189,24 @@ def pass_epoch(args, model, loader, model_optimizer, scaler, device, mode="Train
             model_optimizer.step()
 
         loss += loss_batch.item()
+        loss_sim = loss_batch_sim.item()
+        loss_var = loss_batch_var.item()
+        loss_cov = loss_batch_cov.item()
         loss_ssl += loss_batch_ssl.item()
         loss_cross += loss_batch_cross.item()
         acc_top1 += loss_batch_acc_top[0].cpu()
         acc_top5 += loss_batch_acc_top[1].cpu()
 
     loss /= i_batch + 1
+    loss_sim /= i_batch + 1
+    loss_var /= i_batch + 1
+    loss_cov /= i_batch + 1
     loss_ssl /= i_batch + 1
     loss_cross /= i_batch + 1
     acc_top1 /= i_batch + 1
     acc_top5 /= i_batch + 1
-    return loss, loss_ssl, loss_cross, acc_top1, acc_top5
+    lossesDict = {"loss": loss, "loss_ssl":loss_ssl, "loss_sim":loss_sim, "loss_var":loss_var, "loss_cov":loss_cov, "loss_cross":loss_cross}
+    return lossesDict, acc_top1, acc_top5
 
 def train(args, model, loaders, writer, device):
     train_loss_history = []
@@ -200,7 +215,12 @@ def train(args, model, loaders, writer, device):
     val_loss_history = []
     val_acc_top1_history = []
     val_acc_top5_history = []
-
+    
+    coVWeightingLoss = None
+    if args.UseCoVWeightingLoss:
+        coVWeightingLoss = losses.CoVWeightingLoss(NUM_LOSSES, device).to(device)
+        print("Use CoVWeighting")
+    
     model_optimizer = optim.SGD(
         model.parameters(),
         lr=args.lr * (args.batch_size / 256),
@@ -217,32 +237,35 @@ def train(args, model, loaders, writer, device):
     for epoch in range(args.epochs):
         print("\nEpoch {}/{}".format(epoch + 1, args.epochs))
         print("-" * 10)
-        train_loss, train_loss_ssl, train_loss_cross, train_acc_top1, train_acc_top5 = pass_epoch(
+        train_lossesDict, train_acc_top1, train_acc_top5 = pass_epoch(
             args,
             model,
             loaders["train"],
             model_optimizer,
             scaler,
             device,
+            coVWeightingLoss,
             "Train",
         )
         with torch.no_grad():
-            val_loss, val_loss_ssl, val_loss_cross, val_acc_top1, val_acc_top5 = pass_epoch(
+            val_lossesDict, val_acc_top1, val_acc_top5 = pass_epoch(
                 args,
                 model,
                 loaders["val"],
                 model_optimizer,
                 scaler,
                 device,
+                coVWeightingLoss,
                 "Eval",
             )
-            _, val_never_loss_ssl, _, _, _ = pass_epoch(
+            val_never_lossesDict, _, _ = pass_epoch(
                 args,
                 model,
                 loaders["val_never"],
                 model_optimizer,
                 scaler,
                 device,
+                coVWeightingLoss,
                 "Eval",
             )
             y_pre, y = eval_pass_epoch(model, loaders["val_never"], device)
@@ -252,34 +275,49 @@ def train(args, model, loaders, writer, device):
         if (wandb != None):
             logMsg = {}
             logMsg["epoch"] = epoch
-            logMsg["loss/train"] = train_loss
-            logMsg["loss/val"] = val_loss
-            logMsg["ssl/train"] = train_loss_ssl
-            logMsg["ssl/val"] = val_loss_ssl
-            logMsg["cross/train"] = train_loss_cross
-            logMsg["cross/val"] = val_loss_cross
+            logMsg["loss/train"] = train_lossesDict["loss"]
+            logMsg["loss/val"] = val_lossesDict["loss"]
+            logMsg["ssl/train"] = train_lossesDict["loss_ssl"]
+            logMsg["ssl/val"] = val_lossesDict["loss_ssl"]
+            logMsg["cross/train"] =  train_lossesDict["loss_cross"]
+            logMsg["cross/val"] = val_lossesDict["loss_cross"]
             logMsg["top1/train"] = train_acc_top1
             logMsg["top1/val"] = val_acc_top1
             logMsg["top5/train"] = train_acc_top5
             logMsg["top5/val"] = val_acc_top5
-            logMsg["ssl/val_unseen"] = val_never_loss_ssl
+            logMsg["ssl/val_unseen"] = val_never_lossesDict["loss_ssl"]
             logMsg["hitRatio/k=1"] = hitRatioList[0]
             logMsg["hitRatio/k=5"] = hitRatioList[4]
+            # ssl sim var cov
+            logMsg["sim/train"] = train_lossesDict["loss_sim"]
+            logMsg["var/train"] = train_lossesDict["loss_var"]
+            logMsg["cov/train"] = train_lossesDict["loss_cov"]
+            logMsg["sim/val"] = val_lossesDict["loss_sim"]
+            logMsg["var/val"] = val_lossesDict["loss_var"]
+            logMsg["cov/val"] = val_lossesDict["loss_cov"]
+            logMsg["sim/val_unseen"] = val_never_lossesDict["loss_sim"]
+            logMsg["var/val_unseen"] = val_never_lossesDict["loss_var"]
+            logMsg["cov/val_unseen"] = val_never_lossesDict["loss_cov"]
+            logMsg["loss_weight/cross"] = coVWeightingLoss.alphas[0]
+            logMsg["loss_weight/ssl"] = coVWeightingLoss.alphas[1]
+#             logMsg["loss_weight/sim"] = coVWeightingLoss.alphas[1]
+#             logMsg["loss_weight/var"] = coVWeightingLoss.alphas[2]
+#             logMsg["loss_weight/cov"] = coVWeightingLoss.alphas[3]
             wandb.log(logMsg)
             wandb.watch(model,log = "all", log_graph=True)
 
-        writer.add_scalars("loss", {"train": train_loss, "val": val_loss}, epoch)
-        writer.add_scalars("ssl", {"train": train_loss_ssl, "val": val_loss_ssl}, epoch)
-        writer.add_scalars("cross", {"train": train_loss_cross, "val": val_loss_cross}, epoch)
-        writer.add_scalars("top1", {"train": train_acc_top1, "val": val_acc_top1}, epoch)
-        writer.add_scalars("top5", {"train": train_acc_top5, "val": val_acc_top5}, epoch)
-        writer.flush()
+#         writer.add_scalars("loss", {"train": train_loss, "val": val_loss}, epoch)
+#         writer.add_scalars("ssl", {"train": train_loss_ssl, "val": val_loss_ssl}, epoch)
+#         writer.add_scalars("cross", {"train": train_loss_cross, "val": val_loss_cross}, epoch)
+#         writer.add_scalars("top1", {"train": train_acc_top1, "val": val_acc_top1}, epoch)
+#         writer.add_scalars("top5", {"train": train_acc_top5, "val": val_acc_top5}, epoch)
+#         writer.flush()
 
-        train_loss_history.append(train_loss)
+        train_loss_history.append(train_lossesDict["loss"])
         train_acc_top1_history.append(train_acc_top1)
         train_acc_top5_history.append(train_acc_top5)
 
-        val_loss_history.append(val_loss)
+        val_loss_history.append(val_lossesDict["loss"])
         val_acc_top1_history.append(val_acc_top1)
         val_acc_top5_history.append(val_acc_top5)
 
@@ -287,12 +325,12 @@ def train(args, model, loaders, writer, device):
         update_loss_hist(args, {"train": train_acc_top1_history, "val": val_acc_top1_history}, "Top1")
         update_loss_hist(args, {"train": train_acc_top5_history, "val": val_acc_top5_history}, "Top5")
 
-        if val_loss <= min_val_loss:
-            min_val_loss = val_loss
+        if val_lossesDict["loss"] <= min_val_loss:
+            min_val_loss = val_lossesDict["loss"]
             print("Best, save model, epoch = {}".format(epoch))
             torch.save(model, "model/{}/checkpoint.pth.tar".format(args.output_foloder))
-        if val_never_loss_ssl <= min_val_never_loss:
-            min_val_never_loss = val_never_loss_ssl
+        if val_never_lossesDict["loss_ssl"] <= min_val_never_loss:
+            min_val_never_loss = val_never_lossesDict["loss_ssl"]
             print("Best, save never model, epoch = {}".format(epoch))
             torch.save(model, "model/{}/checkpoint_never.pth.tar".format(args.output_foloder))
         if hitRatioList[0] >= max_hitRatioList:
@@ -300,7 +338,6 @@ def train(args, model, loaders, writer, device):
             print("Best, save hitRatio model, epoch = {}".format(epoch))
             torch.save(model, "model/{}/checkpoint_hitRatio.pth.tar".format(args.output_foloder))
     torch.cuda.empty_cache()
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Facenet")
@@ -393,11 +430,6 @@ if __name__ == "__main__":
         type=float,
         default=0.5,
     )
-#     parser.add_argument(
-#         "--pretrain",
-#         type=str,
-#         default="",
-#     )
     parser.add_argument(
         '--pretrain',
         type=str,
@@ -424,6 +456,10 @@ if __name__ == "__main__":
         "--dataRatio",
         type=float,
         default=0.9,
+    )
+    parser.add_argument(
+        "--UseCoVWeightingLoss",
+        action='store_true',
     )
     args = parser.parse_args()
 
