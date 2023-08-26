@@ -1,6 +1,9 @@
-# Bird_classification
+# SSL Face classification
 
 This repository is the implementation of SSL Face classification
+
+<img src='img/FaceNet.png' align="mid" width=80%>
+
 
 ## Requirements
 
